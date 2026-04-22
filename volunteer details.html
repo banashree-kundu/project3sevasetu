@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SevaSetu - Task Details</title>
+    <link rel="stylesheet" href="volunteerdetails.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo"><i class="fa-solid fa-hand-holding-heart"></i> SevaSetu</div>
+ <div class="nav-icons">
+            <span><i class="fa-solid fa-bell" style="color: rgb(40, 37, 41);"></i></span>
+            <span><i class="fa-solid fa-envelope" style="color: rgb(40, 37, 41);"></i></span>
+            <div class="user-avatar"></div>
+            <span></span>
+            <div class="user-avatar"></div>
+        </div>
+    </header>
+<h1 style="color: #4caf82;">Sustainable Community Garden Setup</h1>
+    <nav class="breadcrumb">My Tasks > Sustainable Garden Initiative</nav>
+
+    <main class="container">
+        <div class="left-col">
+            <section class="card hero-card">
+                <div class="hero-header">
+                    <div class="ngo-logo">NGO</div>
+                    <div class="hero-text">
+                        <div class="tags">
+                            <span class="tag urgency">URGENCY: HIGH</span>
+                            <span class="tag category">ENVIRONMENT</span>
+                        </div>
+                        <h1>Sustainable Community Garden Setup</h1>
+                        <p class="ngo-name">🌿 Kindred Grove NGO</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card task-overview">
+                <h3><i class="fa-solid fa-file" style="color: rgb(40, 37, 41);"></i> Task Overview</h3>
+                <p>We are looking for dedicated volunteers to help establish a new urban community garden in the heart of the Kindred Grove district. This project involves preparing the soil, constructing raised beds, and setting up an initial irrigation system.</p>
+                
+                <div class="skills-section">
+                    <h4>SKILLS YOU BRING</h4>
+                    <div class="skills-options">
+                        <input type="checkbox" id="skill1" class="skill-checkbox">
+                        <label for="skill1">✔ Urban Farming</label>
+
+                        <input type="checkbox" id="skill2" class="skill-checkbox">
+                        <label for="skill2">✔ Carpentry Basics</label>
+
+                        <input type="checkbox" id="skill3" class="skill-checkbox">
+                        <label for="skill3">+ Heavy Lifting</label>
+                    </div>
+                </div>
+            </section>
+
+            <div class="bottom-row">
+                <div class="card map-card">
+                    <div class="map-placeholder">Kindred Grove District</div>
+                    <img src="Gemini_Generated_Image_x11f8x11f8x11f8x (1).png" alt="Map View" class="map-img">
+                    <div class="distance-badge"><i class="fa-solid fa-location-dot" style="color: rgb(40, 37, 41);"></i><span>Distance : 1.2 miles away</span> 
+                    </div>
+                </div>
+
+                <div class="card deadline-card">
+                    <div class="date-info">
+                        <span class="calendar-icon"><i class="fa-solid fa-calendar" style="color: rgb(128, 101, 5);"></i></span>
+                        <div>
+                            <small>DEADLINE</small>
+                            <strong>October 24, 2024</strong>
+                        </div>
+                    </div>
+                    <div class="commitment">
+                        <div class="flex-between">
+                            <label>Time Commitment</label>
+                            <span id="time-val"><strong>6 Hours</strong></span>
+                        </div>
+                        <input type="range" id="time-slider" min="1" max="12" value="6">
+                        <div class="progress-bar"><div class="progress" style="width: 80%;"></div></div>
+                        <small>8 slots remaining out of 10</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="card action-card">
+                <h3>Take Action</h3>
+                <button class="btn btn-accept" onclick="alert('Task Accepted!')"><i class="fa-solid fa-user" style="color: rgb(40, 37, 41);"></i>Accept Task</button>
+                <button class="btn btn-decline" onclick="alert('Task Declined')"><i class="fa-solid fa-times" style="color: rgb(128, 101, 5);"></i> Decline</button>
+            </div>
+
+            <div class="card profile-card">
+                <div class="coordinator">
+                    <div class="profile-pic"></div>
+                    <div>
+                        <strong>Sarah Mitchell</strong><br>
+                        <small>Project Coordinator</small>
+                    </div>
+                </div>
+                <button class="btn btn-message" onclick="alert('Opening chat...')"><i class="fa-solid fa-comment" style="color: rgb(40, 37, 41);"></i> Message Sarah</button>
+                <div class="contact-info">
+                    <p><i class="fa-solid fa-envelope" style="color: rgb(40, 37, 41);"></i>contact@kindredgrove.org</p>
+                    <p>✔ Verified Organization</p>
+                </div>
+            </div>
+
+            <div class="tip-card">
+                <h4>VOLUNTEER TIP</h4>
+                <p>"Remember to bring gardening gloves and a reusable water bottle. We'll provide the heavy equipment and snacks!"</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="volunteer details.js"></script>
+</body>
+</html>
