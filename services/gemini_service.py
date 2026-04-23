@@ -51,13 +51,13 @@ def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
         if ft == "docx":
             text = _extract_docx_text(image_url)   # download + parse
             response = client.models.generate_content(
-                model    = "gemini-1.5-flash",
+                model    = "gemini-2.5-flash",
                 contents = [f"Field report content:\n\n{text}\n\n{_build_prompt()}"],
             )
             return _parse_response(response.text.strip())
         
         response = client.models.generate_content(
-            model    = "gemini-1.5-flash",
+            model    = "gemini-2.5-flash",
             contents = [
                 types.Part.from_uri(
                     file_uri  = image_url,   # Gemini fetches this itself — no download needed

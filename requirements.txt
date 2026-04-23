@@ -2,3 +2,5 @@ Flask
 firebase-admin
 python-dotenv
 requests
+google-generativeai
+python-docx
