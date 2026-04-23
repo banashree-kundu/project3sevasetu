@@ -45,7 +45,7 @@ import base64
 import json
 import logging
 from typing import Any
-from upstash_qstash import Receiver
+from qstash import Receiver
 
 import requests   # pip install requests  (already used in most Flask projects)
 
