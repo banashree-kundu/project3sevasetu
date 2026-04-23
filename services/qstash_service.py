@@ -51,7 +51,7 @@ import requests   # pip install requests  (already used in most Flask projects)
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-QSTASH_PUBLISH_URL = "https://qstash-us-east-1.upstash.io"
+QSTASH_PUBLISH_URL = "https://qstash-us-east-1.upstash.io/v2/publish"
 _TOKEN             = None   # loaded lazily so import doesn't fail at cold start
 
 
