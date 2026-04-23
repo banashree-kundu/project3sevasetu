@@ -23,7 +23,7 @@ async function loadOlaMapsKey() {
 }
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   await loadOlaMapsKey();
   loadDashboard();
   initManualMap();   // initialize the map inside the manual modal

@@ -31,7 +31,7 @@ let _allMatchedTasks = [];
 // 1. INIT — skeletons fire BEFORE any API call
 // ─────────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Show skeletons immediately so no static HTML is visible
   showSkeletons();
   await loadOlaMapsKey();   // 🔥 FIRST load key
