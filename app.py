@@ -857,21 +857,11 @@ def ngo_onboarding():
 # ═════════════════════════════════════════════════════════════════════════════
  
 def _verify_or_abort():
-    """
-    Returns a 401 response if the request signature is invalid.
-    Returns None if the request is legitimate.
- 
-    In local development (no QSTASH_CURRENT_SIGNING_KEY set), this
-    always passes so you can test by calling the route directly.
-    """
-    raw_body  = request.get_data()
-    signature = request.headers.get("Upstash-Signature", "")
- 
-    if not qstash_service.verify_qstash_signature(raw_body, signature):
-        logger.warning("[Worker] Rejected request — bad QStash signature.")
+    # Check for the custom secret header
+    secret = request.headers.get("X-QStash-Secret")
+    if secret != os.environ.get("QSTASH_SECRET"):
         return jsonify({"error": "Unauthorized"}), 401
- 
-    return None   # all good
+    return None
  
  
 # ═════════════════════════════════════════════════════════════════════════════

@@ -102,42 +102,14 @@ def enqueue_matching(need_id: str, need_data: dict) -> bool:
 from qstash import Receiver
 
 def verify_qstash_signature(request_body: bytes, signature_header: str) -> bool:
-    current_key = os.environ.get("QSTASH_CURRENT_SIGNING_KEY", "")
+    # Get a secret from your Vercel Env (e.g., QSTASH_SECRET_PASSWORD)
+    secret = os.environ.get("QSTASH_SECRET")
     
-    # 1. Dev Bypass
-    if not current_key:
-        return True
-        
-    try:
-        from qstash import Receiver
-        
-        # 2. Force the URL check to be the full public URL
-        # Upstash verifies that the URL in the signature matches the URL of the receiver
-        receiver = Receiver(
-            current_signing_key=current_key,
-            next_signing_key=os.environ.get("QSTASH_NEXT_SIGNING_KEY", ""),
-        )
-        
-        # 3. Explicitly pass the full URL of the route being called
-        # QStash sends the request to this exact URL.
-        url = f"{_base_url()}/api/internal/process-report"
-        
-        # The verify method can take the 'url' argument to ensure 
-        # the signature matches the destination
-        is_valid = receiver.verify(
-            body=request_body.decode('utf-8'),
-            signature=signature_header,
-            url=url 
-        )
-        
-        if not is_valid:
-            logger.error(f"DEBUG: Verification failed for URL: {url}")
-            
-        return is_valid
-        
-    except Exception as e:
-        logger.error(f"Signature verification system error: {e}")
-        return False
+    # Check if the header matches your secret password
+    # QStash allows you to send custom headers
+    actual_secret = request.headers.get("X-QStash-Secret")
+    
+    return secret == actual_secret
 # ═════════════════════════════════════════════════════════════════════════════
 # INTERNAL — low-level publish
 # ═════════════════════════════════════════════════════════════════════════════
@@ -150,9 +122,10 @@ def _publish(endpoint: str, body: dict, delay_secs: int = 0, retries: int = 3) -
     destination = f"{_base_url()}{endpoint}"
 
     headers = {
-        "Authorization":   f"Bearer {_token()}",
-        "Content-Type":    "application/json",
+        "Authorization": f"Bearer {_token()}",
+        "Content-Type":  "application/json",
         "Upstash-Retries": str(retries),
+        "Upstash-Forward-X-QStash-Secret": os.environ.get("QSTASH_SECRET", "") # <--- THIS
     }
     if delay_secs > 0:
         headers["Upstash-Delay"] = f"{delay_secs}s"
