@@ -131,7 +131,6 @@ def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     ngo_id = need.get("ngo_id")
     if ngo_id and match_ids:
         try:
-            from services import firebase_services
             firebase_services.log_activity(
                 ngo_id, "matched",
                 f"{len(match_ids)} volunteer{'s' if len(match_ids) != 1 else ''} matched by AI",
