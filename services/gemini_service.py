@@ -100,7 +100,7 @@ def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
         response = client.models.generate_content(
             model    = GEMINI_MODEL,
             contents = [prompt],
-            config   = generation_config,
+            #config   = generation_config,
         )
     else:
         # PDF and images: Gemini fetches the URL directly

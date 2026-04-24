@@ -273,7 +273,7 @@ def _gemini_score_all(candidates: list[dict], need: dict, api_key: str) -> list[
     response = client.models.generate_content(
         model    = GEMINI_MODEL,
         contents = [prompt],
-        config   = generation_config,
+        #config   = generation_config,
     )
 
     results = _parse_response(response.text.strip(), len(candidates))
