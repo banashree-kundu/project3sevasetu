@@ -14,7 +14,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key-change-in-prod")
 
 from flask_socketio import SocketIO, join_room, leave_room, emit
-socketio = SocketIO(app, cors_allowed_origins="*", manage_session=True)
+# Vercel serverless does NOT support WebSockets (no persistent connections).
+# Force polling transport so Socket.IO works correctly on Vercel.
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    manage_session=True,
+    async_mode="threading",
+    transports=["polling"],
+)
 logger = logging.getLogger(__name__)
 # ======================
 # Firebase Init
@@ -168,9 +176,6 @@ def api_upload_report():
     report_id = report_ref.id
  
     # ── Step 3: Enqueue Gemini extraction via QStash ──────────────────────────
-    # QStash will POST to /api/internal/process-report in ~2 seconds.
-    # This call takes ~200ms — much faster than starting Gemini here.
-    
     enqueued = qstash_service.enqueue_report_processing(
         report_id = report_id,
         ngo_uid   = uid,
@@ -180,20 +185,16 @@ def api_upload_report():
     )
  
     if not enqueued:
-        # QStash publish failed — log it but don't fail the user request.
-        # The processing page will show "failed" after polling times out.
         logger.error(
             f"[Upload] QStash enqueue failed for report_id={report_id!r}. "
             "The report was saved but Gemini extraction will not run automatically."
         )
-        # Optionally mark as failed immediately so the user sees a clear error:
-        # report_ref.update({"status": "failed", "error": "Job queue unavailable"})
  
     # ── Step 4: Return immediately — user goes to the polling page ────────────
     return jsonify({
         "redirect":    f"/ngo/upload/processing/{report_id}",
         "report_id":   report_id,
-        "needs_count": 0,   # real count arrives after Gemini finishes
+        "needs_count": 0,
     })
  
  
@@ -222,10 +223,6 @@ def ngo_upload_review_page(report_id):
                            report_id=report_id, user=session["user"])
  
 
-
-
-
-
 # ══════════════════════════════════════════════════════════════
 # API — FIELD REPORTS LIST
 # ══════════════════════════════════════════════════════════════
@@ -247,7 +244,6 @@ def api_ngo_reports():
     for doc in docs:
         d          = doc.to_dict()
         d["id"]    = doc.id
-        # Derive a clean file name from image_url if file_name not stored
         if not d.get("file_name") and d.get("image_url"):
             url_parts = d["image_url"].split("/")
             d["file_name"] = url_parts[-1].split("?")[0] if url_parts else "report"
@@ -285,11 +281,9 @@ def api_report_status(report_id):
     if d.get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
  
-    # Count draft needs for this report
     needs_docs = firebase_services.get_draft_needs_for_report(report_id)
     needs_count = sum(1 for _ in needs_docs)
  
-    # Derive file name
     file_name = d.get("file_name") or (d.get("image_url","").split("/")[-1].split("?")[0])
  
     return jsonify({
@@ -301,7 +295,7 @@ def api_report_status(report_id):
  
  
 # ══════════════════════════════════════════════════════════════
-# API — NEEDS FOR REVIEW  (review page loads these)
+# API — NEEDS FOR REVIEW
 # ══════════════════════════════════════════════════════════════
  
 @app.route("/api/ngo/report/<report_id>/needs")
@@ -311,7 +305,6 @@ def api_report_needs(report_id):
  
     uid = session["user"]["uid"]
  
-    # Verify ownership
     report_doc = firebase_services.get_report_by_report_id(report_id)
     if not report_doc.exists or report_doc.to_dict().get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
@@ -335,13 +328,6 @@ def api_report_needs(report_id):
     })
  
 
- 
-# ══════════════════════════════════════════════════════════════
-# API — PUBLISH REVIEWED NEEDS
-# Called from review page "Confirm & Post All Needs" button
-# ══════════════════════════════════════════════════════════════
- 
- 
 @app.route("/api/ngo/report/<report_id>/publish", methods=["POST"])
 def api_report_publish(report_id):
     if not session.get("user"):
@@ -351,7 +337,6 @@ def api_report_publish(report_id):
     data = request.get_json() or {}
     needs_to_publish = data.get("needs", [])
  
-    # Verify the NGO owns this report
     report_doc = firebase_services.get_report_by_report_id(report_id)
     if not report_doc.exists or report_doc.to_dict().get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
@@ -365,21 +350,13 @@ def api_report_publish(report_id):
         if not need_id:
             continue
  
-        # ── Resolve location ─────────────────────────────────────────
-        # The review page sends location as:
-        #   { city, lat, lng }  — if the NGO did NOT edit the field
-        #   "plain string"      — if the NGO typed a new/edited location
         raw_loc = need_data.get("location", "")
         if isinstance(raw_loc, dict) and raw_loc.get("lat") and raw_loc.get("lng"):
-            # Already a geocoded dict — use as-is
             location = raw_loc
         elif isinstance(raw_loc, dict):
-            # Dict but missing coords (e.g. fallback from geocoding_safe)
-            # Try re-geocoding using the city text
             city_text = raw_loc.get("city", "")
             location  = geocode_location_safe(city_text) if city_text else raw_loc
         elif raw_loc and str(raw_loc).strip():
-            # NGO edited the location field → re-geocode
             location = geocode_location_safe(str(raw_loc).strip())
         else:
             location = {"city": "", "lat": None, "lng": None}
@@ -391,7 +368,7 @@ def api_report_publish(report_id):
             "urgency_score":    need_data.get("urgency_score", 5),
             "urgency_label":    need_data.get("urgency_label", "MEDIUM"),
             "required_skills":  need_data.get("required_skills", []),
-            "location":         location,           # always { city, lat, lng }
+            "location":         location,
             "estimated_people": need_data.get("estimated_people"),
             "status":           "open",
             "updated_at":       firestore.SERVER_TIMESTAMP,
@@ -399,7 +376,6 @@ def api_report_publish(report_id):
         firebase_services.update_need(need_id, update)
         published_ids.append(need_id)
  
-        # ── Enqueue AI matching ───────────────────────────────────────
         need_payload = {
             **update,
             "ngo_id":     uid,
@@ -430,10 +406,6 @@ def api_report_publish(report_id):
 
 @app.route("/api/ngo/need/create", methods=["POST"])
 def api_create_need():
-    """
-    Manual need creation from the dashboard modal.
-    Same as before but uses QStash instead of threading for matching.
-    """
     if not session.get("user"):
         return jsonify({"error": "Unauthorized"}), 401
  
@@ -461,8 +433,7 @@ def api_create_need():
  
     need_id = firebase_services.create_need(need)
  
-    # Enqueue matching via QStash (no threading)
-    need_payload = {**need, "created_at": None}   # strip SERVER_TIMESTAMP sentinel
+    need_payload = {**need, "created_at": None}
     enqueued = qstash_service.enqueue_matching(need_id=need_id, need_data=need_payload)
  
     if not enqueued:
@@ -495,10 +466,6 @@ def api_skip_match(match_id):
 # NGO NEEDS PAGE
 # ══════════════════════════════════════════════
 
-# ══════════════════════════════════════════════
-# PAGE — NEEDS LIST
-# ══════════════════════════════════════════════
-
 @app.route("/ngo/needs")
 def ngo_needs_page():
     if not session.get("user"):
@@ -508,10 +475,6 @@ def ngo_needs_page():
     return render_template("ngo_needs_list.html", user=session["user"])
 
 
-# ══════════════════════════════════════════════
-# API — ALL NEEDS FOR NGO
-# ══════════════════════════════════════════════
-
 @app.route("/api/ngo/needs")
 def api_ngo_needs():
     if not session.get("user"):
@@ -519,11 +482,8 @@ def api_ngo_needs():
 
     uid = session["user"]["uid"]
     all_needs = firebase_services.get_needs_by_ngo(uid)
-    # Exclude soft-deleted needs from all stats and recent lists
     all_needs = [n for n in all_needs if n.get("status") != "deleted"]
 
-
-    # Serialize Firestore timestamps for JSON
     for need in all_needs:
         ts = need.get("created_at")
         if ts and hasattr(ts, "timestamp"):
@@ -535,10 +495,6 @@ def api_ngo_needs():
     return jsonify({"needs": all_needs})
 
 
-# ══════════════════════════════════════════════
-# API — DELETE (soft) A NEED
-# ══════════════════════════════════════════════
-
 @app.route("/api/ngo/need/<need_id>", methods=["DELETE"])
 def api_delete_need(need_id):
     if not session.get("user"):
@@ -546,14 +502,12 @@ def api_delete_need(need_id):
 
     uid = session["user"]["uid"]
 
-    # Verify the NGO owns this need
     need = firebase_services.get_need_by_id(need_id)
     if not need:
         return jsonify({"error": "Not found"}), 404
     if need.get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
 
-    # Soft-delete: set status to "deleted"
     firebase_services.update_need(need_id, {
         "status": "deleted",
         "updated_at": firestore.SERVER_TIMESTAMP,
@@ -568,11 +522,9 @@ def volunteer_onboarding():
     if not session.get("user"):
         return redirect("/getstarted")
 
-    # ── GET → show form ──
     if request.method == "GET":
         return render_template("volunteer_onboarding.html", user=session["user"])
 
-    # ── POST → save data ──
     uid = session["user"]["uid"]
 
     name         = request.form.get("name",         "").strip()
@@ -583,20 +535,17 @@ def volunteer_onboarding():
     latitude     = request.form.get("latitude",     "0")
     longitude    = request.form.get("longitude",    "0")
 
-    # Skills come as JSON string: '["First Aid","Teaching"]'
     import json as _json
     try:
         skills = _json.loads(request.form.get("skills", "[]"))
     except Exception:
         skills = []
 
-    # Server-side validation
     if not name:
         return jsonify({"error": "Name is required."}), 400
     if not skills:
         return jsonify({"error": "Please select at least one skill."}), 400
 
-    # Handle profile photo upload
     photo_url = session["user"].get("photo_url", "")
     photo = request.files.get("photo")
     if photo and photo.filename:
@@ -604,7 +553,6 @@ def volunteer_onboarding():
         if result:
             photo_url = result.get("url", photo_url)
 
-    # Build volunteer profile data
     volunteer_data = {
         "name":         name,
         "phone":        phone,
@@ -620,10 +568,8 @@ def volunteer_onboarding():
         "online":       True,
     }
 
-    # Save to Firestore
     firebase_services.create_volunteer_profile(uid, volunteer_data)
 
-    # Update session
     session["user"]["name"]      = name
     session["user"]["photo_url"] = photo_url
     session["user"]["onboarded"] = True
@@ -645,10 +591,6 @@ def volunteer_dashboard():
     return render_template("volunteer_dashboard.html", user=session["user"])
 
 
-# ══════════════════════════════════════════════
-# VOLUNTEER DASHBOARD — API DATA
-# ══════════════════════════════════════════════
-
 @app.route("/api/volunteer/dashboard")
 def api_volunteer_dashboard():
     if not session.get("user"):
@@ -656,10 +598,8 @@ def api_volunteer_dashboard():
 
     uid = session["user"]["uid"]
 
-    # Get volunteer profile
     vol = firebase_services.get_volunteer_profile(uid)
 
-    # Stats
     all_matches = firebase_services.get_matches_for_volunteer(uid)
 
     matched_tasks  = [m for m in all_matches if m.get("status") == "suggested"]
@@ -673,7 +613,6 @@ def api_volunteer_dashboard():
         "rating":          vol.get("rating", 0) if vol else 0
     }
 
-    # Enrich matched tasks with need details
     enriched_matched  = firebase_services.enrich_tasks_with_needs(
         matched_tasks, uid
     )
@@ -722,7 +661,6 @@ def api_volunteer_complete_task(task_id):
     uid  = session["user"]["uid"]
     data = request.json or {}
 
-    # Handle proof photo upload if provided
     proof_url = None
     proof = request.files.get("proof")
     if proof and proof.filename:
@@ -758,7 +696,6 @@ def landing():
 
 @app.route("/getstarted")
 def get_started():
-    # If already logged in, skip login and go to dashboard
     if session.get("user"):
         role = session["user"].get("role")
         if role == "ngo":
@@ -766,11 +703,9 @@ def get_started():
         elif role == "volunteer":
             return redirect("/volunteer/dashboard")
         else:
-            # Logged in but no role yet → role selection
             return redirect("/select-role")
 
-    # Pass the intended role so login page can carry it forward
-    role = request.args.get("role")  # "ngo" or "volunteer"
+    role = request.args.get("role")
     return render_template("login.html", intended_role=role)
 
 
@@ -782,9 +717,7 @@ def get_started():
 def firebase_login():
     data       = request.json
     id_token   = data.get("idToken")
-    # The role the user clicked on the landing page
-    # Sent from auth.js along with the token
-    intended_role = data.get("intendedRole")  # "ngo" | "volunteer" | None
+    intended_role = data.get("intendedRole")
 
     if not id_token:
         return jsonify({"error": "No token provided"}), 400
@@ -799,17 +732,12 @@ def firebase_login():
     name  = decoded.get("name") or "User"
     photo = decoded.get("picture", "")
 
-    # ── Temporary stub until firebase_services is wired up ──
-    # Replace this block with real Firestore reads when ready:
     doc = firebase_services.get_user_by_uid(uid)
 
-    # ── NEW USER ─────────────────────────────────────────────
     if not doc:
         firebase_services.add_user(uid, email, name, photo, role=intended_role)
 
-        # If they came with an intended role (from landing page CTA),
-        # save it immediately — no need to show role selection
-        role_to_save = intended_role  # "ngo", "volunteer", or None
+        role_to_save = intended_role
 
         session["user"] = {
             "uid":      uid,
@@ -824,11 +752,8 @@ def firebase_login():
         elif role_to_save == "volunteer":
             return jsonify({"status": "new", "redirect": "/volunteer/onboarding"})
         else:
-            # No intended role (user came directly to /getstarted)
-            # Show role selection page
             return jsonify({"status": "new", "redirect": "/select-role"})
 
-    # ── EXISTING USER ────────────────────────────────────────
     role = doc.get("role")
 
     session["user"] = {
@@ -839,13 +764,11 @@ def firebase_login():
         "role":     role
     }
 
-    # Route to correct dashboard based on saved role
     if role == "ngo":
         return jsonify({"status": "existing", "redirect": "/ngo/dashboard"})
     elif role == "volunteer":
         return jsonify({"status": "existing", "redirect": "/volunteer/dashboard"})
     else:
-        # Somehow existing user with no role — send to role selection
         return jsonify({"status": "existing", "redirect": "/select-role"})
 
 
@@ -857,7 +780,6 @@ def firebase_login():
 def select_role_page():
     if not session.get("user"):
         return redirect("/getstarted")
-    # If they already have a role, skip
     if session["user"].get("role"):
         role = session["user"]["role"]
         if role == "ngo":
@@ -893,18 +815,14 @@ def select_role():
 @app.route("/ngo/onboarding", methods=["GET", "POST"])
 def ngo_onboarding():
 
-    # Must be logged in
     if not session.get("user"):
         return redirect("/getstarted")
 
-    # ── GET → Show the form ──
     if request.method == "GET":
         return render_template("ngo_onboarding.html", user=session["user"])
 
-    # ── POST → Save the data ──
     uid = session["user"]["uid"]
 
-    # Collect text fields
     org_name      = request.form.get("org_name", "").strip()
     description   = request.form.get("description", "").strip()
     contact_email = request.form.get("contact_email", "").strip()
@@ -914,19 +832,15 @@ def ngo_onboarding():
     latitude      = request.form.get("latitude", "0")
     longitude     = request.form.get("longitude", "0")
 
-    # Basic server-side validation
     if not org_name or not description or not contact_email or not city:
         return jsonify({"error": "Please fill in all required fields."}), 400
 
-    # Handle logo upload
     logo_url = None
     logo = request.files.get("logo")
     if logo and logo.filename:
-        # TODO: upload to ImageKit
         result   = imagekit_services.upload_ngo_logo(uid, logo)
         logo_url = result
 
-    # Build the data dict
     ngo_data = {
         "org_name":      org_name,
         "description":   description,
@@ -944,10 +858,8 @@ def ngo_onboarding():
         "onboarded":     True,
     }
 
-    # TODO: Save to Firestore
     firebase_services.create_ngo_profile(uid, ngo_data)
 
-    # Update session
     session["user"]["city"]     = city
     session["user"]["onboarded"] = True
     session.modified = True
@@ -960,7 +872,6 @@ def ngo_onboarding():
 # ═════════════════════════════════════════════════════════════════════════════
  
 def _verify_or_abort():
-    # Check for the custom secret header
     secret = request.headers.get("X-QStash-Secret")
     if secret != os.environ.get("QSTASH_SECRET"):
         return jsonify({"error": "Unauthorized"}), 401
@@ -968,28 +879,15 @@ def _verify_or_abort():
  
  
 # ═════════════════════════════════════════════════════════════════════════════
-# WORKER 1 — Report Processing  (Gemini extraction)
-# Called by QStash ~2 seconds after the user uploads a file
+# WORKER 1 — Report Processing
 # ═════════════════════════════════════════════════════════════════════════════
  
 @app.route("/api/internal/process-report", methods=["POST"])
 def worker_process_report():
-    """
-    Payload from QStash (set by qstash_service.enqueue_report_processing):
-    {
-        "report_id":  "abc123",
-        "ngo_uid":    "uid_of_ngo",
-        "image_url":  "https://ik.imagekit.io/...",
-        "file_name":  "community_survey.pdf"
-        "file_type":  "PDF"
-    }
-    """
-    # ── 1. Verify signature ───────────────────────────────────────────────────
     guard = _verify_or_abort()
     if guard:
         return guard
  
-    # ── 2. Parse payload ──────────────────────────────────────────────────────
     data = request.get_json(force=True) or {}
  
     report_id = data.get("report_id")
@@ -1000,14 +898,10 @@ def worker_process_report():
  
     if not report_id or not ngo_uid or not image_url:
         logger.error(f"[Worker:process-report] Missing fields: {data}")
-        # Return 400 — QStash will NOT retry 4xx responses by default
         return jsonify({"error": "Missing required fields"}), 400
  
     logger.info(f"[Worker:process-report] Starting — report_id={report_id!r}")
  
- 
-    # ── 3. Sanity check — report still exists and is still "processing" ───────
-    
     report_doc = firebase_services.get_report_by_report_id(report_id)
  
     if not report_doc.exists:
@@ -1019,7 +913,6 @@ def worker_process_report():
         logger.info(f"[Worker:process-report] Already {current_status!r} — skipping.")
         return jsonify({"ok": True, "skipped": "already_done"}), 200
  
-    # ── 4. Run Gemini extraction ───────────────────────────────────────────────
     try:
         needs = gemini_service.extract_needs_from_url(image_url, file_type=file_type)
         logger.info(f"[Worker:process-report] Gemini found {len(needs)} needs.")
@@ -1045,38 +938,24 @@ def worker_process_report():
     except Exception as exc:
         logger.error(f"[Worker:process-report] Failed — {exc}", exc_info=True)
  
-        # ── FIXED: use firebase_services, not undefined report_ref ──
-        # Also: 429 quota errors now reach here (not swallowed in gemini_service)
-        # so QStash will retry this job automatically after backoff.
         firebase_services.update_report_status(report_id, {
             "status": "failed",
             "error":  str(exc)[:500],
         })
  
-        # Return 500 → QStash retries (up to the retry count set at enqueue time)
         return jsonify({"error": str(exc)}), 500
  
  
 # ═════════════════════════════════════════════════════════════════════════════
-# WORKER 2 — Volunteer Matching  (AI matching engine)
-# Called by QStash ~3 seconds after a need is published
+# WORKER 2 — Volunteer Matching
 # ═════════════════════════════════════════════════════════════════════════════
  
 @app.route("/api/internal/run-matching", methods=["POST"])
 def worker_run_matching():
-    """
-    Payload from QStash (set by qstash_service.enqueue_matching):
-    {
-        "need_id":   "xyz789",
-        "need_data": { ...full need dict... }
-    }
-    """
-    # ── 1. Verify signature ───────────────────────────────────────────────────
     guard = _verify_or_abort()
     if guard:
         return guard
  
-    # ── 2. Parse payload ──────────────────────────────────────────────────────
     data      = request.get_json(force=True) or {}
     need_id   = data.get("need_id")
     need_data = data.get("need_data", {})
@@ -1087,9 +966,6 @@ def worker_run_matching():
  
     logger.info(f"[Worker:run-matching] Starting — need_id={need_id!r}")
  
- 
-    # ── 3. Re-fetch the need from Firestore ───────────────────────────────────
-    # The payload may be slightly stale — always use the freshest data.
     need_doc = firebase_services.get_need_by_need_id(need_id)
  
     if not need_doc.exists:
@@ -1097,17 +973,13 @@ def worker_run_matching():
         return jsonify({"ok": True, "skipped": "need_not_found"}), 200
  
     fresh_need = need_doc.to_dict()
-    fresh_need["_id"] = need_id  # convenience
-    # Skip if the need was soft-deleted after this job was enqueued
+    fresh_need["_id"] = need_id
     if fresh_need.get("status") == "deleted":
         logger.info(f"[Worker:run-matching] Need {need_id!r} is deleted — skipping.")
         return jsonify({"ok": True, "skipped": "need_deleted"}), 200
  
- 
-    # Merge: use fresh Firestore data, fall back to payload for any missing fields
     merged_need = {**need_data, **fresh_need}
  
-    # ── 4. Run the AI matching engine ─────────────────────────────────────────
     try:
         from services.matching_service import run_matching_for_need
         match_ids = run_matching_for_need(need_id, merged_need)
@@ -1120,7 +992,6 @@ def worker_run_matching():
  
     except Exception as exc:
         logger.error(f"[Worker:run-matching] Failed — {exc}", exc_info=True)
-        # Return 500 → QStash will retry
         return jsonify({"error": str(exc)}), 500
 
 
@@ -1148,7 +1019,7 @@ def get_ola_maps_key():
     })
 
 # ══════════════════════════════════════════════
-# API — TOPBAR LAZY DATA  (avatar + notification state)
+# API — TOPBAR LAZY DATA
 # ══════════════════════════════════════════════
 
 @app.route("/api/user/topbar")
@@ -1178,7 +1049,7 @@ def api_fcm_token_manage():
     
     if request.method == "POST":
         firebase_services.save_fcm_token(uid, token)
-    else: # DELETE
+    else:
         firebase_services.remove_fcm_token(uid, token)
         
     return jsonify({"success": True})
@@ -1194,6 +1065,8 @@ def check_auth():
     if session.get("user"):
         return jsonify({"authenticated": True, "user": session["user"]})
     return jsonify({"authenticated": False}), 401
+
+
 # ══════════════════════════════════════════════
 # SOCKET.IO EVENTS
 # ══════════════════════════════════════════════
@@ -1215,19 +1088,18 @@ def on_leave(data):
 def handle_send_message(data):
     conv_id = data.get('conversation_id')
     text    = data.get('text', '').strip()
-    sender_id = data.get('sender_id') # In production, verify from session
+    sender_id = data.get('sender_id')
     
     if not conv_id or not text or not sender_id:
         return
         
-    # 1. Persist to Firestore & Notify via FCM
     msg_id = firebase_services.send_chat_message(conv_id, sender_id, text)
     
-    # 2. Broadcast to room (Real-time update)
     emit('receive_message', {
         'id': msg_id,
         'text': text,
         'sender_id': sender_id,
+        'conversation_id': conv_id,
         'created_at': datetime.now(timezone.utc).isoformat()
     }, room=conv_id)
 
@@ -1256,7 +1128,6 @@ def api_chat_conversations():
 def api_chat_messages(conv_id):
     if not session.get("user"):
         return jsonify({"error": "Unauthorized"}), 401
-    # Check if user is participant
     uid = session["user"]["uid"]
     conv = firebase_services.db.collection("conversations").document(conv_id).get()
     if not conv.exists or uid not in conv.to_dict().get("participants", []):
@@ -1278,7 +1149,6 @@ def api_chat_send():
     if not conv_id or not text:
         return jsonify({"error": "Invalid data"}), 400
         
-    # Check participation
     conv_doc = firebase_services.db.collection("conversations").document(conv_id).get()
     if not conv_doc.exists or uid not in conv_doc.to_dict().get("participants", []):
         return jsonify({"error": "Forbidden"}), 403
@@ -1351,5 +1221,3 @@ def api_chat_start_with_vol(need_id):
     uid = session["user"]["uid"]
     conv_id = firebase_services.get_or_create_conversation([uid, vol_uid], need_id)
     return jsonify({"success": True, "conversation_id": conv_id})
-
-
