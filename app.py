@@ -317,6 +317,7 @@ def api_report_needs(report_id):
 # Called from review page "Confirm & Post All Needs" button
 # ══════════════════════════════════════════════════════════════
  
+ 
 @app.route("/api/ngo/report/<report_id>/publish", methods=["POST"])
 def api_report_publish(report_id):
     if not session.get("user"):
@@ -326,11 +327,12 @@ def api_report_publish(report_id):
     data = request.get_json() or {}
     needs_to_publish = data.get("needs", [])
  
- 
     # Verify the NGO owns this report
     report_doc = firebase_services.get_report_by_report_id(report_id)
     if not report_doc.exists or report_doc.to_dict().get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
+ 
+    from services.geocoding_service import geocode_location_safe
  
     published_ids = []
  
@@ -339,7 +341,25 @@ def api_report_publish(report_id):
         if not need_id:
             continue
  
-        # Promote the draft need to "open" with any edits from the review page
+        # ── Resolve location ─────────────────────────────────────────
+        # The review page sends location as:
+        #   { city, lat, lng }  — if the NGO did NOT edit the field
+        #   "plain string"      — if the NGO typed a new/edited location
+        raw_loc = need_data.get("location", "")
+        if isinstance(raw_loc, dict) and raw_loc.get("lat") and raw_loc.get("lng"):
+            # Already a geocoded dict — use as-is
+            location = raw_loc
+        elif isinstance(raw_loc, dict):
+            # Dict but missing coords (e.g. fallback from geocoding_safe)
+            # Try re-geocoding using the city text
+            city_text = raw_loc.get("city", "")
+            location  = geocode_location_safe(city_text) if city_text else raw_loc
+        elif raw_loc and str(raw_loc).strip():
+            # NGO edited the location field → re-geocode
+            location = geocode_location_safe(str(raw_loc).strip())
+        else:
+            location = {"city": "", "lat": None, "lng": None}
+ 
         update = {
             "title":            need_data.get("title", ""),
             "description":      need_data.get("description", ""),
@@ -347,37 +367,29 @@ def api_report_publish(report_id):
             "urgency_score":    need_data.get("urgency_score", 5),
             "urgency_label":    need_data.get("urgency_label", "MEDIUM"),
             "required_skills":  need_data.get("required_skills", []),
-            "location":         need_data.get("location", ""),
+            "location":         location,           # always { city, lat, lng }
             "estimated_people": need_data.get("estimated_people"),
             "status":           "open",
             "updated_at":       firestore.SERVER_TIMESTAMP,
         }
-        firebase_services.update_need(need_id,update)
+        firebase_services.update_need(need_id, update)
         published_ids.append(need_id)
  
-        # ── Enqueue AI matching for this need via QStash ──────────────────────
-        # QStash will POST to /api/internal/run-matching in ~3 seconds.
-        # We enqueue once per need, so each gets its own matching job.
- 
-        # Build the payload — must be JSON-serialisable (no Firestore sentinels)
+        # ── Enqueue AI matching ───────────────────────────────────────
         need_payload = {
             **update,
             "ngo_id":     uid,
-            "created_at": None,   # Firestore SERVER_TIMESTAMP isn't serialisable
+            "created_at": None,
         }
- 
         enqueued = qstash_service.enqueue_matching(
             need_id   = need_id,
             need_data = need_payload,
         )
- 
         if not enqueued:
             logger.error(
-                f"[Publish] QStash enqueue failed for matching need_id={need_id!r}. "
-                "Volunteers will not be matched for this need automatically."
+                f"[Publish] QStash enqueue failed for matching need_id={need_id!r}."
             )
  
-    # Log activity once for the whole batch
     firebase_services.log_activity(
         uid,
         "created",
