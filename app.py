@@ -57,6 +57,9 @@ def api_ngo_dashboard():
 
     # ── Stats ──────────────────────────────────
     all_needs   = firebase_services.get_needs_by_ngo(uid)
+    # Exclude soft-deleted needs from all stats and recent lists
+    all_needs = [n for n in all_needs if n.get("status") != "deleted"]
+
 
     open_needs       = [n for n in all_needs if n.get("status") == "open"]
     assigned_needs   = [n for n in all_needs if n.get("status") in ("assigned","in_progress")]
@@ -495,6 +498,9 @@ def api_ngo_needs():
 
     uid = session["user"]["uid"]
     all_needs = firebase_services.get_needs_by_ngo(uid)
+    # Exclude soft-deleted needs from all stats and recent lists
+    all_needs = [n for n in all_needs if n.get("status") != "deleted"]
+
 
     # Serialize Firestore timestamps for JSON
     for need in all_needs:
@@ -1046,6 +1052,11 @@ def worker_run_matching():
  
     fresh_need = need_doc.to_dict()
     fresh_need["_id"] = need_id  # convenience
+    # Skip if the need was soft-deleted after this job was enqueued
+    if fresh_need.get("status") == "deleted":
+        logger.info(f"[Worker:run-matching] Need {need_id!r} is deleted — skipping.")
+        return jsonify({"ok": True, "skipped": "need_deleted"}), 200
+ 
  
     # Merge: use fresh Firestore data, fall back to payload for any missing fields
     merged_need = {**need_data, **fresh_need}
