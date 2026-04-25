@@ -1,62 +1,116 @@
-/* firebase-messaging-sw.js */
+/* firebase-messaging-sw.js
+ *
+ * Background push notification handler for SevaSetu.
+ *
+ * Why we fetch config here instead of using postMessage:
+ * - The old approach sent a SET_CONFIG message to registration.active, but if the
+ *   SW was still installing/waiting that reference would be null and the message
+ *   would be silently lost, leaving Firebase uninitialised and killing all background
+ *   push notifications.
+ * - Fetching from /api/get_firebase_config is simpler and always works because the
+ *   SW has network access even when the page is closed.
+ */
 
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
-// This service worker is triggered for background notifications.
-// It will be initialized with the config fetched from the main app.
-// However, service workers don't have access to the main window's fetch easily without async init.
+let messagingInitialized = false;
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
+async function initFirebase() {
+    if (messagingInitialized) return;
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
+    try {
+        // Fetch config from the Flask API — same endpoint the page uses
+        const resp = await fetch("/api/get_firebase_config");
+        if (!resp.ok) throw new Error("Config fetch failed: " + resp.status);
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SET_CONFIG') {
-    const config = event.data.config;
-    if (!firebase.apps.length) {
-      firebase.initializeApp(config);
-      const messaging = firebase.messaging();
-      
-      messaging.onBackgroundMessage((payload) => {
-        console.log('[sw] Background message received:', payload);
-        const notificationTitle = payload.notification.title;
-        const notificationOptions = {
-          body: payload.notification.body,
-          icon: '/static/images/logo.png', // Fallback icon
-          data: payload.data
-        };
+        const config = await resp.json();
 
-        return self.registration.showNotification(notificationTitle, notificationOptions);
-      });
-    }
-  }
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const data = event.notification.data;
-  
-  let urlToOpen = '/';
-  if (data && data.click_action) {
-    urlToOpen = data.click_action;
-  }
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (var i = 0; i < windowClients.length; i++) {
-        var client = windowClients[i];
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
-          return client.focus();
+        // Validate we have the minimum required fields
+        if (!config.apiKey || !config.projectId) {
+            throw new Error("Incomplete Firebase config received");
         }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+        }
+
+        const messaging = firebase.messaging();
+
+        messaging.onBackgroundMessage((payload) => {
+            console.log("[SW] Background message received:", payload);
+
+            const title   = payload.notification?.title   || "SevaSetu";
+            const body    = payload.notification?.body    || "You have a new notification";
+            const iconUrl = payload.notification?.icon    || "/static/images/logo.png";
+            const data    = payload.data || {};
+
+            self.registration.showNotification(title, {
+                body,
+                icon:  iconUrl,
+                badge: "/static/images/logo.png",
+                data,
+                // Keep notification in tray until dismissed
+                requireInteraction: false,
+            });
+        });
+
+        messagingInitialized = true;
+        console.log("[SW] Firebase Messaging initialized successfully");
+
+    } catch (err) {
+        console.error("[SW] Firebase init failed:", err);
+    }
+}
+
+self.addEventListener("install", (event) => {
+    console.log("[SW] Installing");
+    // Skip waiting so the new SW activates immediately
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    console.log("[SW] Activating");
+    event.waitUntil(
+        clients.claim().then(() => initFirebase())
+    );
+});
+
+// Also init on fetch so the SW wakes up if it was sleeping
+self.addEventListener("fetch", (event) => {
+    // Only handle our own origin, ignore cross-origin requests
+    if (!event.request.url.startsWith(self.location.origin)) return;
+    // Don't intercept — just use this event as a wake-up trigger for lazy init
+    if (!messagingInitialized) {
+        event.waitUntil(initFirebase());
+    }
+});
+
+self.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    const data = event.notification.data || {};
+
+    let urlToOpen = "/";
+    if (data.click_action) {
+        urlToOpen = data.click_action;
+    } else if (data.conversation_id) {
+        urlToOpen = `/inbox?conv_id=${data.conversation_id}`;
+    } else if (data.need_id) {
+        urlToOpen = `/need/${data.need_id}/volunteer`;
+    }
+
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+            // Focus existing tab if open
+            for (const client of windowClients) {
+                if (client.url.includes(urlToOpen) && "focus" in client) {
+                    return client.focus();
+                }
+            }
+            // Otherwise open new tab
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
 });
