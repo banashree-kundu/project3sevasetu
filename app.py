@@ -514,6 +514,31 @@ def api_ngo_needs():
     return jsonify({"needs": all_needs})
 
 
+# ══════════════════════════════════════════════
+# API — DELETE (soft) A NEED
+# ══════════════════════════════════════════════
+
+@app.route("/api/ngo/need/<need_id>", methods=["DELETE"])
+def api_delete_need(need_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+
+    # Verify the NGO owns this need
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return jsonify({"error": "Not found"}), 404
+    if need.get("ngo_id") != uid:
+        return jsonify({"error": "Forbidden"}), 403
+
+    # Soft-delete: set status to "deleted"
+    firebase_services.update_need(need_id, {
+        "status": "deleted",
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    })
+
+    return jsonify({"success": True})
 
 # ══════════════════════════════════════════════
 
