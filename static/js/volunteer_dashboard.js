@@ -181,10 +181,19 @@ function buildTaskCard(task) {
           `<span class="task-tag">${escHtml(s)}</span>`
         ).join("")}
       </div>
-      <div class="task-actions">
-        <button class="btn-accept" data-id="${escHtml(task.id)}">Accept Task</button>
+      <div class="task-actions" style="display: flex; gap: 8px;">
+        <button class="btn-accept" data-id="${escHtml(task.id)}" style="flex: 1;">Accept Task</button>
+        <button onclick="startChat('${task.ngo_id}', '${task.id}')" 
+                style="padding: 0 12px; border-radius: 99px; background: #eef2ff; border: 1.5px solid #e0e7ff; color: #4338ca; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                title="Chat with NGO">
+           <span class="material-symbols-outlined" style="font-size: 18px;">chat</span>
+        </button>
         <button class="btn-decline" data-id="${escHtml(task.id)}">Decline</button>
       </div>
+      <button class="view-details-btn" style="margin-top: 12px; width: 100%; justify-content: center;"
+              onclick="window.location.href='/need/${escHtml(task.id)}/volunteer'">
+        View Details
+      </button>
     </div>`;
 }
 
@@ -261,11 +270,17 @@ function renderAcceptedTasks(tasks) {
             <div class="progress-fill" style="width:${progress}%;"></div>
           </div>
         </div>
-        <button class="view-details-btn"
-                onclick="window.location.href='/volunteer/task/${escHtml(task.id)}'">
-          View Details
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <button class="view-details-btn" style="flex: 1; justify-content: center;"
+                  onclick="window.location.href='/need/${escHtml(task.id)}/volunteer'">
+            View Details
+          </button>
+          <button onclick="startChat('${task.ngo_id}', '${task.id}')" 
+                  style="padding: 0 16px; border-radius: 12px; background: #f0faf5; border: 1.5px solid #006c4420; color: #006c44; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                  title="Chat with NGO">
+             <span class="material-symbols-outlined" style="font-size: 20px;">chat</span>
+          </button>
+        </div>
       </div>`;
   }).join("");
 }
@@ -333,6 +348,25 @@ async function declineTask(taskId, btn) {
   _allMatchedTasks = _allMatchedTasks.filter(t => t.id !== taskId);
   const countEl = document.getElementById("allTasksCount");
   if (countEl) countEl.textContent = `${_allMatchedTasks.length} tasks available in your area today`;
+}
+
+async function startChat(otherUid, needId) {
+  try {
+    const res = await fetch("/api/chat/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ other_uid: otherUid, need_id: needId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+    } else {
+      showToast("Could not start chat: " + (data.error || "Unknown error"), "error");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Chat initialization failed.", "error");
+  }
 }
 
 

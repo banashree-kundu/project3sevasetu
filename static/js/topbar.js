@@ -134,7 +134,7 @@ async function _requestAndSaveFcmToken(bellBtn) {
     
     // Register Service Worker for background
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.register('/static/firebase-messaging-sw.js');
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       registration.active?.postMessage({ type: 'SET_CONFIG', config: firebaseConfig });
     }
 

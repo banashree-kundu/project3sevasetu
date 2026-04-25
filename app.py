@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 from firebase_admin import auth, credentials
 import firebase_admin
 import os,logging
@@ -38,6 +38,10 @@ if not firebase_admin._apps:
 # PAGE ROUTE
 # ══════════════════════════════════════════════
 
+@app.route("/firebase-messaging-sw.js")
+def serve_sw():
+    return send_from_directory(app.static_folder, "firebase-messaging-sw.js", mimetype="application/javascript")
+
 @app.route("/ngo/dashboard")
 def ngo_dashboard():
     if not session.get("user"):
@@ -45,6 +49,20 @@ def ngo_dashboard():
     if session["user"].get("role") != "ngo":
         return redirect("/select-role")
     return render_template("ngo_dashboard.html", user=session["user"])
+
+@app.route("/need/<need_id>/<role>")
+def need_details(need_id, role):
+    if not session.get("user"):
+        return redirect("/getstarted")
+    
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return "Need not found", 404
+        
+    return render_template("ngo&volunteerdetails.html", 
+                           need=need, 
+                           role=role, 
+                           user=session["user"])
 
 
 # ══════════════════════════════════════════════
@@ -1268,6 +1286,22 @@ def api_chat_send():
     msg_id = firebase_services.send_chat_message(conv_id, uid, text)
     return jsonify({"success": True, "message_id": msg_id})
 
+@app.route("/api/chat/start", methods=["POST"])
+def api_chat_start():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json() or {}
+    other_id = data.get("other_uid")
+    need_id  = data.get("need_id")
+    
+    if not other_id:
+        return jsonify({"error": "Missing other_uid"}), 400
+        
+    uid = session["user"]["uid"]
+    conv_id = firebase_services.get_or_create_conversation([uid, other_id], need_id)
+    return jsonify({"success": True, "conversation_id": conv_id})
+
 
 
 # ======================
@@ -1286,3 +1320,36 @@ def logout():
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)
+
+@app.route("/api/chat/start-with-ngo/<need_id>", methods=["POST"])
+def api_chat_start_with_ngo(need_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return jsonify({"error": "Need not found"}), 404
+        
+    ngo_uid = need.get("ngo_id")
+    if not ngo_uid:
+        return jsonify({"error": "NGO not found"}), 404
+        
+    uid = session["user"]["uid"]
+    conv_id = firebase_services.get_or_create_conversation([uid, ngo_uid], need_id)
+    return jsonify({"success": True, "conversation_id": conv_id})
+
+@app.route("/api/chat/start-with-vol/<need_id>", methods=["POST"])
+def api_chat_start_with_vol(need_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    need = firebase_services.get_need_by_id(need_id)
+    if not need or not need.get("assigned_volunteer_id"):
+        return jsonify({"error": "Volunteer not assigned"}), 404
+        
+    vol_uid = need.get("assigned_volunteer_id")
+    uid = session["user"]["uid"]
+    conv_id = firebase_services.get_or_create_conversation([uid, vol_uid], need_id)
+    return jsonify({"success": True, "conversation_id": conv_id})
+
+

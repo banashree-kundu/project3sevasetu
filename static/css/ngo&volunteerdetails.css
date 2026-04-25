@@ -729,3 +729,25 @@ body {
   transition: background var(--transition), transform var(--transition);
 }
 .chat-send-btn:hover { background: var(--green-mid); transform: scale(1.05); }
+
+/* ─── SKELETON LOADING ─────────────────────────────────────── */
+.skeleton-box {
+  background: #eef2f0;
+  background: linear-gradient(
+    90deg,
+    #eef2f0 25%,
+    #d1dbd4 37%,
+    #eef2f0 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 4px;
+  color: transparent !important;
+  pointer-events: none;
+  min-height: 1em;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}

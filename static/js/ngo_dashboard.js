@@ -147,7 +147,7 @@ function renderRecentNeeds(needs) {
             </div>
           </div>
         </div>
-        <a href="/ngo/need/${need.id}" class="px-6 py-2 bg-surface-container-highest text-on-surface font-bold rounded-full text-sm group-hover:bg-primary group-hover:text-white transition-all whitespace-nowrap ml-4">View</a>
+        <a href="/need/${need.id}/ngo" class="px-6 py-2 bg-surface-container-highest text-on-surface font-bold rounded-full text-sm group-hover:bg-primary group-hover:text-white transition-all whitespace-nowrap ml-4">View</a>
       </div>`;
   }).join('<hr class="border-surface-container"/>');
 }
@@ -271,6 +271,11 @@ function renderMatches(matches) {
                        shadow-lg shadow-primary/10 hover:bg-primary/90 transition-colors">
           Approve
         </button>
+        <button onclick="startChat('${match.volunteer_id}', '${match.need_id}')" 
+                class="p-3 bg-secondary/10 text-secondary rounded-full hover:bg-secondary/20 transition-all flex items-center justify-center"
+                title="Chat with volunteer">
+          <span class="material-symbols-outlined" style="font-size: 20px;">chat</span>
+        </button>
         <button onclick="skipMatch('${match.match_id}', this)"
                 class="flex-1 py-3 bg-surface-container-highest text-on-surface rounded-full
                        font-bold text-sm hover:bg-surface-container-high transition-colors">
@@ -351,6 +356,25 @@ async function skipMatch(matchId, btn) {
     card.style.opacity = "0"; card.style.transition = "opacity 0.3s";
     setTimeout(() => card.remove(), 300);
   } catch { btn.disabled = false; btn.textContent = "Skip"; }
+}
+
+async function startChat(otherUid, needId) {
+  try {
+    const res = await fetch("/api/chat/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ other_uid: otherUid, need_id: needId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+    } else {
+      showToast("Could not start chat: " + (data.error || "Unknown error"), "error");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Chat initialization failed.", "error");
+  }
 }
 
 
