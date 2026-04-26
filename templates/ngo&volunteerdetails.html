@@ -4,211 +4,618 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SevaSetu | {{ need.title }}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/ngo&volunteerdetails.css') }}" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #006c44;
+      --primary-light: #4caf7d;
+      --secondary:     #855300;
+      --tertiary:      #a83639;
+      --surface:       #f8f9ff;
+      --surface-card:  #ffffff;
+      --on-surface:    #121c2a;
+      --on-sv:         #3e4942;
+      --outline:       #bdcabf;
+      --error:         #ba1a1a;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #f4f7f4;
+      color: var(--on-surface);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(248,249,255,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,108,68,.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+    }
+    .nav-brand { font-size: 1.25rem; font-weight: 800; color: #064e35; display: flex; align-items: center; gap: 8px; }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-link  { font-size: .875rem; font-weight: 600; color: var(--on-sv); text-decoration: none; padding: 8px 14px; border-radius: 99px; transition: background .15s; }
+    .nav-link:hover { background: rgba(0,108,68,.07); }
+    .avatar-sm { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+
+    /* ── PAGE WRAPPER ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .8rem; font-weight: 700; color: var(--on-sv);
+      text-decoration: none; margin-bottom: 24px;
+      opacity: .7; transition: opacity .15s;
+    }
+    .back-link:hover { opacity: 1; }
+
+    /* ── GRID ── */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 24px rgba(0,108,68,.06);
+      border: 1px solid rgba(0,108,68,.05);
+    }
+    .card + .card { margin-top: 16px; }
+
+    /* ── URGENCY / STATUS BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 99px;
+      font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge-high    { background: #fde8e8; color: #a83639; }
+    .badge-medium  { background: #fef3c7; color: #855300; }
+    .badge-low     { background: #d1fae5; color: #006c44; }
+    .badge-open    { background: #dbeafe; color: #1d4ed8; }
+    .badge-assigned   { background: #fef3c7; color: #92400e; }
+    .badge-completed  { background: #d1fae5; color: #065f46; }
+    .badge-in_progress { background: #ede9fe; color: #5b21b6; }
+
+    /* ── NEED TITLE AREA ── */
+    .need-title { font-size: 1.6rem; font-weight: 800; line-height: 1.25; margin-bottom: 12px; }
+    .badge-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+
+    .description {
+      font-size: .9rem; color: var(--on-sv); line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .section-label {
+      font-size: .7rem; font-weight: 800; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--on-sv); opacity: .55;
+      margin-bottom: 10px;
+    }
+
+    /* ── SKILLS ── */
+    .skills-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .skill-tag {
+      padding: 5px 14px; border-radius: 99px;
+      background: rgba(119,218,164,.2); color: #004d30;
+      font-size: .78rem; font-weight: 700;
+    }
+
+    /* ── INFO CARDS ── */
+    .info-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    @media (max-width: 500px) { .info-cards { grid-template-columns: 1fr; } }
+
+    .info-card {
+      background: var(--surface); border-radius: 12px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid rgba(0,108,68,.07);
+    }
+    .info-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info-icon-green { background: rgba(0,108,68,.1); color: var(--primary); }
+    .info-icon-amber { background: rgba(133,83,0,.1);  color: var(--secondary); }
+    .info-card-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--on-sv); opacity: .5; }
+    .info-card-value { font-size: .9rem; font-weight: 700; color: var(--on-surface); margin-top: 2px; }
+
+    /* ── PROGRESS STEPS ── */
+    .progress-section { margin-top: 8px; }
+    .progress-steps {
+      display: flex; align-items: center;
+      margin-top: 12px;
+    }
+    .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      border: 2.5px solid var(--outline);
+      background: white; color: var(--outline);
+      transition: all .3s;
+    }
+    .step.done .step-circle   { background: var(--primary); border-color: var(--primary); color: white; }
+    .step.current .step-circle{ border-color: var(--primary); color: var(--primary); }
+    .step span:last-child { font-size: .65rem; font-weight: 700; color: var(--on-sv); opacity: .6; white-space: nowrap; }
+    .step.done span:last-child { opacity: 1; color: var(--primary); }
+    .step-line { flex: 1; height: 2px; background: var(--outline); margin: 0 4px; }
+    .step-line.done-line { background: var(--primary); }
+
+    /* ── RIGHT COLUMN CARDS ── */
+    .card-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--on-sv); opacity: .5; margin-bottom: 14px; }
+
+    /* Volunteer card */
+    .vol-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      object-fit: cover; border: 2.5px solid rgba(0,108,68,.2);
+      background: #e6faf0; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 800; color: var(--primary);
+    }
+    .vol-name  { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+    .vol-meta  { font-size: .78rem; color: var(--on-sv); opacity: .6; }
+    .vol-skills{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .vol-skill { font-size: .68rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: rgba(119,218,164,.2); color: #004d30; }
+
+    /* Buttons */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 18px; border-radius: 12px; border: none; cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: .875rem; font-weight: 700;
+      transition: all .2s; width: 100%;
+    }
+    .btn + .btn { margin-top: 8px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-primary  { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: #005232; }
+
+    .btn-success  { background: #059669; color: white; }
+    .btn-success:hover:not(:disabled) { background: #047857; }
+
+    .btn-danger   { background: #fee2e2; color: #991b1b; }
+    .btn-danger:hover:not(:disabled) { background: #fecaca; }
+
+    .btn-outline  { background: transparent; color: var(--primary); border: 2px solid rgba(0,108,68,.25); }
+    .btn-outline:hover { background: rgba(0,108,68,.06); }
+
+    .btn-chat     { background: var(--surface); color: var(--primary); border: 1.5px solid rgba(0,108,68,.2); }
+    .btn-chat:hover { background: rgba(0,108,68,.07); }
+
+    /* Skeleton */
+    @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .skel { background: #e2e8f0; border-radius: 8px; animation: skelPulse 1.4s ease infinite; }
+
+    /* Verified card */
+    .verified-card { background: #f0faf5; border: 1px solid rgba(0,108,68,.12); }
+    .verified-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .verified-label { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--primary); }
+    .verified-text { font-size: .82rem; color: var(--on-sv); line-height: 1.6; }
+
+    /* Toast */
+    #toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(18,28,42,.45); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 20px; padding: 32px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
+    .modal-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+    .modal-msg { font-size: .875rem; color: var(--on-sv); line-height: 1.6; margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions .btn { flex: 1; }
+  </style>
 </head>
 <body>
 
-  <!-- Hidden Data for JS -->
-  <input type="hidden" id="needId" value="{{ need.id }}">
+  <!-- Hidden data for JS -->
+  <input type="hidden" id="needId"   value="{{ need.id }}">
   <input type="hidden" id="userRole" value="{{ role }}">
+  <input type="hidden" id="userId"   value="{{ user.uid }}">
 
   <!-- NAV -->
   <nav class="navbar">
-    <div class="nav-brand"><i class="fa-solid fa-hand-holding-heart" style="color: #006c44; margin-right: 8px;"></i>SevaSetu</div>
+    <div class="nav-brand">
+      <span class="material-symbols-outlined" style="color:var(--primary);font-variation-settings:'FILL' 1">volunteer_activism</span>
+      SevaSetu
+    </div>
     <div class="nav-links">
       <a href="/{{ role }}/dashboard" class="nav-link">Dashboard</a>
       <a href="/inbox" class="nav-link">Inbox</a>
-      <button class="icon-btn" aria-label="Notifications">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      </button>
-      <img src="{{ user.photo_url or 'https://ui-avatars.com/api/?name=' + user.name }}" class="avatar" style="width: 32px; height: 32px; border-radius: 50%;">
+      <img src="{{ user.photo_url or 'https://ui-avatars.com/api/?name=' + user.name }}"
+           class="avatar-sm" alt="{{ user.name }}"/>
     </div>
   </nav>
 
-  <main class="page-wrapper">
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <div class="modal-icon" id="modalIcon">⚠️</div>
+      <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+      <p class="modal-msg" id="modalMsg">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-danger"  id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
 
-    <!-- BACK -->
+  <!-- TOAST -->
+  <div id="toast-wrap"></div>
+
+  <div class="page">
     <a href="/{{ role }}/dashboard" class="back-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>
       Back to Dashboard
     </a>
 
     <div class="content-grid">
 
-      <!-- LEFT COLUMN -->
-      <div class="left-col">
-        <div class="title-section">
+      <!-- ══ LEFT COLUMN ══ -->
+      <div>
+        <div class="card">
+          <!-- Title + badges -->
           <h1 class="need-title">{{ need.title }}</h1>
           <div class="badge-row">
-            <span class="badge urgency">URGENCY : {{ need.urgency_label }}</span>
-            <span class="badge healthcare">{{ need.category }}</span>
-            <span class="badge {{ need.status.replace('_', '-') }}">
-              <span class="dot"></span> {{ need.status.upper().replace('_', ' ') }}
+            {% set ul = need.urgency_label | upper if need.urgency_label else 'MEDIUM' %}
+            {% set urgency_cls = 'badge-high' if need.urgency_score >= 7 else ('badge-medium' if need.urgency_score >= 4 else 'badge-low') %}
+            <span class="badge {{ urgency_cls }}">
+              <span class="badge-dot"></span>{{ ul }} URGENCY
+            </span>
+            <span class="badge" style="background:#f0faf5;color:#006c44;">{{ need.category }}</span>
+            {% set s = need.status %}
+            <span class="badge badge-{{ s.replace('_','-') if s else 'open' }}">
+              <span class="badge-dot"></span>
+              {{ s.upper().replace('_',' ') if s else 'OPEN' }}
             </span>
           </div>
-        </div>
 
-        <p class="description">{{ need.description }}</p>
+          <p class="description">{{ need.description }}</p>
 
-        <div class="skills-section">
-          <p class="section-label">SKILLS NEEDED</p>
+          <!-- Skills -->
+          {% if need.required_skills %}
+          <p class="section-label">Skills Needed</p>
           <div class="skills-row">
             {% for skill in need.required_skills %}
-            <span class="skill-tag">{{ skill }}</span>
+              <span class="skill-tag">{{ skill }}</span>
             {% endfor %}
           </div>
-        </div>
+          {% endif %}
 
-        <div class="bottom-cards">
-          <!-- Location Card -->
-          <div class="info-card distance-card">
-            <div class="info-card-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/></svg>
-            </div>
-            <div class="info-card-body">
-              <p class="info-card-label">LOCATION</p>
-              <p class="info-card-value">{{ need.location.city or need.location }}</p>
-            </div>
-          </div>
-
-          <!-- Deadline Card -->
-          <div class="info-card deadline-card">
-            <div class="info-card-icon deadline-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div class="info-card-body">
-              <p class="info-card-label">EXPECTED PEOPLE</p>
-              <p class="info-card-value">{{ need.estimated_people or 'TBD' }} beneficiaries</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Fulfillment Progress -->
-        <div class="progress-section">
-          <p class="section-label">FULFILLMENT PROGRESS</p>
-          <div class="progress-steps">
-            <div class="step {{ 'done' if need.status in ['assigned', 'in_progress', 'completed'] else 'current' }}">
-              <div class="step-circle">{% if need.status in ['assigned', 'in_progress', 'completed'] %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}</div>
-              <span>Posted</span>
-            </div>
-            <div class="step-line {{ 'done-line' if need.status in ['assigned', 'in_progress', 'completed'] else '' }}"></div>
-            <div class="step {{ 'done' if need.status in ['in_progress', 'completed'] else ('current' if need.status == 'assigned' else 'upcoming') }}">
-              <div class="step-circle">{% if need.status in ['in_progress', 'completed'] %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}</div>
-              <span>Assigned</span>
-            </div>
-            <div class="step-line {{ 'done-line' if need.status == 'completed' else ('active-line' if need.status == 'in_progress' else '') }}"></div>
-            <div class="step {{ 'done' if need.status == 'completed' else ('current' if need.status == 'in_progress' else 'upcoming') }}">
-              <div class="step-circle">{% if need.status == 'completed' %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}</div>
-              <span>In Progress</span>
-            </div>
-            <div class="step-line {{ 'done-line' if need.status == 'completed' else '' }}"></div>
-            <div class="step {{ 'current' if need.status == 'completed' else 'upcoming' }}">
-              <div class="step-circle {{ 'current-circle' if need.status == 'completed' else 'grey-circle' }}"></div>
-              <span>Completed</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT COLUMN -->
-      <div class="right-col">
-
-        {% if role == 'volunteer' and need.status == 'open' %}
-        <!-- Take Action Card for Volunteers -->
-        <div class="card take-action-card">
-          <p class="card-title">Take Action</p>
-          <button class="btn btn-primary" id="acceptBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-            Accept Task
-          </button>
-        </div>
-        {% endif %}
-
-        {% if need.assigned_volunteer_id %}
-        <!-- Assigned Volunteer Card (Visible to NGO or potentially anyone if we want transparency) -->
-        <div class="card volunteer-card">
-          <div class="volunteer-header">
-            <p class="card-subtitle">ASSIGNED VOLUNTEER</p>
-          </div>
-          <div class="volunteer-info" id="assignedVolInfo">
-            <div class="flex items-center gap-4">
-              <div class="avatar avatar-lg bg-emerald-100 flex items-center justify-center text-emerald-900 font-bold" id="volAvatar">
-                V
+          <!-- Info cards -->
+          <div class="info-cards">
+            <div class="info-card">
+              <div class="info-icon info-icon-green">
+                <span class="material-symbols-outlined">location_on</span>
               </div>
-              <div class="volunteer-meta">
-                <h3 class="volunteer-name" id="volName">Loading...</h3>
-                <div class="rating-row">
-                   <p class="text-xs text-on-surface-variant">Active Coordination</p>
+              <div>
+                <div class="info-card-label">Location</div>
+                <div class="info-card-value">
+                  {% if need.location is mapping %}
+                    {{ need.location.city or "TBD" }}
+                  {% else %}
+                    {{ need.location or "TBD" }}
+                  {% endif %}
                 </div>
               </div>
             </div>
+            <div class="info-card">
+              <div class="info-icon info-icon-amber">
+                <span class="material-symbols-outlined">groups</span>
+              </div>
+              <div>
+                <div class="info-card-label">Beneficiaries</div>
+                <div class="info-card-value">{{ need.estimated_people or "TBD" }}</div>
+              </div>
+            </div>
           </div>
-          <button class="btn btn-chat" id="chatWithVolBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Chat with Volunteer
-          </button>
-        </div>
-        {% elif role == 'volunteer' and need.status != 'open' %}
-          <div class="card verified-card">
-            <p class="verified-text">This task has already been assigned or is no longer available.</p>
-          </div>
-        {% endif %}
 
-        <!-- NGO Info Card -->
+          <!-- Progress Steps -->
+          <p class="section-label">Fulfillment Progress</p>
+          <div class="progress-steps">
+            {% set posted_done   = need.status in ['assigned','in_progress','completed'] %}
+            {% set assigned_done = need.status in ['in_progress','completed'] %}
+            {% set progress_done = need.status == 'completed' %}
+            {% set current_step  = 'posted' if need.status == 'open' else ('assigned' if need.status == 'assigned' else ('in_progress' if need.status == 'in_progress' else 'completed')) %}
+
+            <div class="step {{ 'done' if posted_done else 'current' }}">
+              <div class="step-circle">{% if posted_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Posted</span>
+            </div>
+            <div class="step-line {{ 'done-line' if posted_done }}"></div>
+            <div class="step {{ 'done' if assigned_done else ('current' if need.status == 'assigned' else 'upcoming') }}">
+              <div class="step-circle">{% if assigned_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Assigned</span>
+            </div>
+            <div class="step-line {{ 'done-line' if assigned_done }}"></div>
+            <div class="step {{ 'done' if progress_done else ('current' if need.status == 'in_progress' else 'upcoming') }}">
+              <div class="step-circle">{% if progress_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>In Progress</span>
+            </div>
+            <div class="step-line {{ 'done-line' if progress_done }}"></div>
+            <div class="step {{ 'done current' if need.status == 'completed' else 'upcoming' }}">
+              <div class="step-circle">{% if need.status == 'completed' %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ RIGHT COLUMN ══ -->
+      <div id="rightCol">
+        <!-- Skeleton shown while JS loads details -->
+        <div class="card" id="actionCard">
+          <div style="height:180px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:32px;height:32px;border-radius:50%;border:3px solid var(--primary);border-top-color:transparent;animation:spin .8s linear infinite;"></div>
+          </div>
+        </div>
+
+        <!-- Verified NGO card (always shown) -->
         <div class="card verified-card">
           <div class="verified-header">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#006c44" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-            <span class="verified-label" style="color: #006c44;">VERIFIED NGO</span>
+            <span class="material-symbols-outlined" style="color:var(--primary);font-size:18px;font-variation-settings:'FILL' 1">verified_user</span>
+            <span class="verified-label">Verified NGO</span>
           </div>
-          <p class="verified-text">This mission is posted by a verified organization on SevaSetu. Coordination is monitored for safety.</p>
-          {% if role == 'volunteer' %}
-          <button class="btn btn-outline" style="margin-top: 12px; width: 100%;" id="chatWithNgoBtn">Chat with NGO</button>
-          {% endif %}
+          <p class="verified-text">This mission is posted by a verified organisation on SevaSetu. Coordination is monitored for safety.</p>
         </div>
-
       </div>
-    </div>
-  </main>
 
-  <!-- MODAL OVERLAY -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal" id="modal">
-      <button class="modal-close" id="modalClose">&times;</button>
-      <div class="modal-icon" id="modalIcon">🎉</div>
-      <h3 class="modal-title" id="modalTitle">Ready to Help?</h3>
-      <p class="modal-msg" id="modalMsg">You are accepting this task. The coordinator will be notified.</p>
-      <button class="btn btn-primary modal-confirm" id="modalConfirm">Confirm</button>
     </div>
   </div>
 
-  <!-- CHAT DRAWER -->
-  <div class="chat-overlay" id="chatOverlay"></div>
-  <div class="chat-drawer" id="chatDrawer">
-    <div class="chat-header">
-      <div class="chat-header-info">
-        <div class="chat-avatar" id="drawerAvatar"></div>
-        <div>
-          <strong id="drawerName">Coordinator</strong>
-          <p class="chat-status" id="drawerStatus">Online</p>
-        </div>
-      </div>
-      <button class="icon-btn" id="chatClose">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <!-- Messages will load here -->
-    </div>
-    <div class="chat-input-row">
-      <input type="text" class="chat-input" id="chatInput" placeholder="Write a message...">
-      <button class="chat-send-btn" id="chatSend">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>
-  </div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 
-  <script src="{{ url_for('static', filename='js/ngo&volunteerdetails.js') }}"></script>
+  <script>
+    // ── Data from Jinja ───────────────────────────────────────
+    const NEED_ID   = document.getElementById("needId").value;
+    const USER_ROLE = document.getElementById("userRole").value;
+    const USER_ID   = document.getElementById("userId").value;
+    const NEED_STATUS = "{{ need.status }}";
+    const ASSIGNED_VOL_ID = "{{ need.assigned_volunteer_id or '' }}";
+    const NGO_ID    = "{{ need.ngo_id or '' }}";
+
+    // ── Boot ──────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", loadDetails);
+
+    async function loadDetails() {
+      try {
+        const resp = await fetch(`/api/need/${NEED_ID}`);
+        if (!resp.ok) throw new Error("Failed");
+        const data = await resp.json();
+        renderActionCard(data.need, data.assigned_volunteer);
+      } catch (err) {
+        console.error("loadDetails:", err);
+        document.getElementById("actionCard").innerHTML = `
+          <p style="text-align:center;color:#a83639;font-weight:600;">Failed to load details</p>
+          <button class="btn btn-outline" style="margin-top:12px;" onclick="loadDetails()">Retry</button>`;
+      }
+    }
+
+    // ── Render the right-column action card ──────────────────
+    function renderActionCard(need, assignedVol) {
+      const card = document.getElementById("actionCard");
+      const status   = need.status || "open";
+      const isMyTask = USER_ROLE === "volunteer" && need.assigned_volunteer_id === USER_ID;
+
+      // ── NGO view ─────────────────────────────────────────
+      if (USER_ROLE === "ngo") {
+        let html = `<p class="card-title">Need Management</p>`;
+
+        if (assignedVol) {
+          // Show assigned volunteer
+          const photo = assignedVol.photo_url
+            ? `<img src="${esc(assignedVol.photo_url)}" class="vol-avatar" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" alt="${esc(assignedVol.name)}">`
+            : `<div class="vol-avatar">${(assignedVol.name||"V")[0].toUpperCase()}</div>`;
+
+          const skills = (assignedVol.skills||[]).slice(0,3)
+            .map(s => `<span class="vol-skill">${esc(s)}</span>`).join("");
+
+          html += `
+            <p class="section-label" style="margin-bottom:12px;">Assigned Volunteer</p>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              ${photo}
+              <div>
+                <div class="vol-name">${esc(assignedVol.name)}</div>
+                <div class="vol-meta">
+                  ${assignedVol.rating > 0 ? `⭐ ${Number(assignedVol.rating).toFixed(1)}` : "New volunteer"}
+                </div>
+                <div class="vol-skills">${skills}</div>
+              </div>
+            </div>
+            <button class="btn btn-chat" onclick="chatWithVolunteer()">
+              <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+              Chat with Volunteer
+            </button>
+            <button class="btn btn-danger" style="margin-top:8px;" onclick="confirmUnassign()">
+              <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
+              Unassign Volunteer
+            </button>`;
+        } else if (status === "open") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#bdcabf;display:block;margin-bottom:8px;">person_search</span>
+              <p style="font-weight:700;color:#3e4942;">No volunteer assigned yet</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">AI is matching volunteers — check the dashboard for suggestions.</p>
+            </div>`;
+        } else if (status === "completed") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#059669;display:block;margin-bottom:8px;font-variation-settings:'FILL' 1">task_alt</span>
+              <p style="font-weight:700;color:#059669;">Task Completed</p>
+            </div>`;
+        }
+
+        card.innerHTML = html;
+        return;
+      }
+
+      // ── Volunteer view ────────────────────────────────────
+      let html = `<p class="card-title">Task Actions</p>`;
+
+      if (status === "open") {
+        // Available to accept
+        html += `
+          <button class="btn btn-primary" id="acceptBtn" onclick="acceptTask()">
+            <span class="material-symbols-outlined" style="font-size:18px">check_circle</span>
+            Accept This Task
+          </button>
+          <button class="btn btn-chat" style="margin-top:8px;" onclick="chatWithNgo()">
+            <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+            Chat with NGO
+          </button>`;
+
+      } else if (isMyTask) {
+        // This volunteer is the assigned one
+        if (status === "assigned" || status === "in_progress") {
+          html += `
+            <div style="background:#f0faf5;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(0,108,68,.12);">
+              <p style="font-size:.8rem;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">check_circle</span>
+                You are assigned to this task
+              </p>
+              <p style="font-size:.75rem;color:#3e4942;margin-top:4px;">Please complete the task and submit a proof photo.</p>
+            </div>
+            <a href="/volunteer/task/complete/${NEED_ID}" class="btn btn-success" style="text-decoration:none;">
+              <span class="material-symbols-outlined" style="font-size:18px">task_alt</span>
+              Mark as Complete
+            </a>
+            <button class="btn btn-chat" style="margin-top:8px;" onclick="chatWithNgo()">
+              <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+              Chat with NGO
+            </button>`;
+        } else if (status === "completed") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#059669;display:block;margin-bottom:8px;font-variation-settings:'FILL' 1">task_alt</span>
+              <p style="font-weight:800;color:#059669;font-size:1rem;">Task Completed!</p>
+              <p style="font-size:.8rem;color:#3e4942;margin-top:6px;">Thank you for your contribution.</p>
+            </div>`;
+        }
+
+      } else if (need.assigned_volunteer_id && !isMyTask) {
+        // Another volunteer is assigned
+        html += `
+          <div style="text-align:center;padding:20px 0;">
+            <span class="material-symbols-outlined" style="font-size:3rem;color:#bdcabf;display:block;margin-bottom:8px">person_check</span>
+            <p style="font-weight:700;color:#3e4942;">Already Assigned</p>
+            <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">Another volunteer is handling this need.</p>
+          </div>`;
+      }
+
+      card.innerHTML = html;
+    }
+
+    // ── Actions ───────────────────────────────────────────────
+    async function acceptTask() {
+      // Find the match id first (from matched tasks)
+      const btn = document.getElementById("acceptBtn");
+      if (btn) { btn.disabled = true; btn.textContent = "Accepting..."; }
+
+      try {
+        // Get the match id for this need + volunteer
+        const matchResp = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+        if (!matchResp.ok) throw new Error("Match not found — you may not have been matched yet.");
+        const { match_id } = await matchResp.json();
+
+        const res = await fetch(`/api/volunteer/task/${match_id}/accept`, { method: "POST" });
+        if (!res.ok) throw new Error("Accept failed");
+
+        showToast("Task accepted! The NGO has been notified. ✅", "success");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        showToast(err.message || "Failed to accept. Please try again.", "error");
+        if (btn) { btn.disabled = false; btn.textContent = "Accept This Task"; }
+      }
+    }
+
+    async function chatWithNgo() {
+      try {
+        const res = await fetch(`/api/chat/start-with-ngo/${NEED_ID}`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+        else showToast("Could not start chat.", "error");
+      } catch { showToast("Chat error.", "error"); }
+    }
+
+    async function chatWithVolunteer() {
+      try {
+        const res = await fetch(`/api/chat/start-with-vol/${NEED_ID}`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+        else showToast("Could not start chat.", "error");
+      } catch { showToast("Chat error.", "error"); }
+    }
+
+    function confirmUnassign() {
+      openConfirmModal({
+        icon:    "⚠️",
+        title:   "Unassign Volunteer?",
+        msg:     "This will release the volunteer from this task and set the need back to Open. The AI will re-match.",
+        btnText: "Yes, Unassign",
+        btnCls:  "btn-danger",
+        onConfirm: doUnassign,
+      });
+    }
+
+    async function doUnassign() {
+      closeConfirmModal();
+      try {
+        const res = await fetch(`/api/ngo/need/${NEED_ID}/unassign`, { method: "POST" });
+        if (!res.ok) throw new Error("Unassign failed");
+        showToast("Volunteer unassigned. Need is now open again.", "success");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        showToast(err.message || "Failed to unassign.", "error");
+      }
+    }
+
+    // ── Confirm Modal ─────────────────────────────────────────
+    function openConfirmModal({ icon, title, msg, btnText, btnCls, onConfirm }) {
+      document.getElementById("modalIcon").textContent    = icon;
+      document.getElementById("modalTitle").textContent   = title;
+      document.getElementById("modalMsg").textContent     = msg;
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = btnText;
+      btn.className   = `btn ${btnCls}`;
+      btn.onclick     = onConfirm;
+      document.getElementById("confirmModal").classList.add("open");
+    }
+
+    function closeConfirmModal() {
+      document.getElementById("confirmModal").classList.remove("open");
+    }
+
+    document.getElementById("confirmModal").addEventListener("click", function(e) {
+      if (e.target === this) closeConfirmModal();
+    });
+
+    // ── Toast ─────────────────────────────────────────────────
+    function showToast(msg, type = "success") {
+      const el = document.createElement("div");
+      el.style.cssText = `background:white;border-left:4px solid ${type==="success"?"#006c44":"#ba1a1a"};border-radius:.75rem;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-size:.875rem;font-weight:600;max-width:320px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#121c2a;`;
+      el.textContent = msg;
+      el.onclick = () => el.remove();
+      document.getElementById("toast-wrap").appendChild(el);
+      setTimeout(() => { el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(()=>el.remove(),300); }, 4500);
+    }
+
+    function esc(s) {
+      return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+    }
+  </script>
 </body>
 </html>

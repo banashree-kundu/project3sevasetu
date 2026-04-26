@@ -994,7 +994,159 @@ def worker_run_matching():
         logger.error(f"[Worker:run-matching] Failed — {exc}", exc_info=True)
         return jsonify({"error": str(exc)}), 500
 
+# ══════════════════════════════════════════════
+# NEW ROUTES — paste these into app.py
+# ══════════════════════════════════════════════
 
+# ── GET /api/need/<need_id>  (JSON detail for details page) ──
+
+@app.route("/api/need/<need_id>")
+def api_need_detail(need_id):
+    """
+    Returns full need data + assigned volunteer profile (if any).
+    Used by the ngo&volunteerdetails page JS.
+    """
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return jsonify({"error": "Not found"}), 404
+
+    # Serialize Firestore timestamps
+    for field in ("created_at", "updated_at"):
+        ts = need.get(field)
+        if ts and hasattr(ts, "timestamp"):
+            need[field] = ts.timestamp()
+
+    # Fetch assigned volunteer details if present
+    assigned_volunteer = None
+    vol_id = need.get("assigned_volunteer_id")
+    if vol_id:
+        vol = firebase_services.get_volunteer_profile(vol_id)
+        if vol:
+            assigned_volunteer = {
+                "uid":       vol_id,
+                "name":      vol.get("name", "Volunteer"),
+                "photo_url": vol.get("photo_url", ""),
+                "skills":    vol.get("skills", []),
+                "rating":    vol.get("rating", 0),
+                "phone":     vol.get("phone", ""),
+            }
+
+    return jsonify({
+        "need":               need,
+        "assigned_volunteer": assigned_volunteer,
+    })
+
+
+# ── POST /api/ngo/need/<need_id>/unassign ──
+
+@app.route("/api/ngo/need/<need_id>/unassign", methods=["POST"])
+def api_unassign_need(need_id):
+    """
+    NGO unassigns a volunteer from a need.
+    Sets need back to open, marks the match as unassigned, logs activity.
+    """
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return jsonify({"error": "Not found"}), 404
+    if need.get("ngo_id") != uid:
+        return jsonify({"error": "Forbidden"}), 403
+
+    vol_id = need.get("assigned_volunteer_id")
+    if not vol_id:
+        return jsonify({"error": "No volunteer assigned"}), 400
+
+    # Reset need to open
+    firebase_services.update_need(need_id, {
+        "status":                 "open",
+        "assigned_volunteer_id":  firestore.DELETE_FIELD,
+        "updated_at":             firestore.SERVER_TIMESTAMP,
+    })
+
+    # Find and update the accepted match doc
+    db = firebase_services.get_db()
+    matches = (
+        db.collection("matches")
+          .where("need_id",      "==", need_id)
+          .where("volunteer_id", "==", vol_id)
+          .where("status",       "==", "accepted")
+          .limit(1)
+          .stream()
+    )
+    for match_doc in matches:
+        match_doc.reference.update({
+            "status":       "unassigned",
+            "unassigned_at": firestore.SERVER_TIMESTAMP,
+        })
+
+    # Log activity
+    vol_profile = firebase_services.get_volunteer_profile(vol_id)
+    vol_name    = vol_profile.get("name", "Volunteer") if vol_profile else "Volunteer"
+    need_title  = need.get("title", "")
+
+    firebase_services.log_activity(
+        uid,
+        "warning",
+        f"{vol_name} unassigned from task",
+        f'Need: "{need_title}"'
+    )
+
+    return jsonify({"success": True})
+
+
+# ── GET /api/volunteer/match-for-need/<need_id> ──
+
+@app.route("/api/volunteer/match-for-need/<need_id>")
+def api_volunteer_match_for_need(need_id):
+    """
+    Returns the match doc id for the current volunteer + this need.
+    Used by the completion form to know which match to mark complete.
+    """
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+    db  = firebase_services.get_db()
+
+    matches = (
+        db.collection("matches")
+          .where("need_id",      "==", need_id)
+          .where("volunteer_id", "==", uid)
+          .where("status",       "in", ["accepted", "in_progress"])
+          .limit(1)
+          .stream()
+    )
+
+    for doc in matches:
+        return jsonify({"match_id": doc.id, "status": doc.to_dict().get("status")})
+
+    return jsonify({"error": "Match not found"}), 404
+
+
+# ── GET /volunteer/task/complete/<need_id> ──
+
+@app.route("/volunteer/task/complete/<need_id>")
+def volunteer_complete_page(need_id):
+    """Completion form page for a volunteer."""
+    if not session.get("user"):
+        return redirect("/getstarted")
+    if session["user"].get("role") != "volunteer":
+        return redirect("/select-role")
+
+    need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return "Need not found", 404
+
+    return render_template("volunteer_complete.html",
+                           need=need,
+                           user=session["user"])
 
 # ======================
 # Firebase Config API
