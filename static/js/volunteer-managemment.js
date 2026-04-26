@@ -230,7 +230,7 @@ card.querySelector(".assignBtn").addEventListener("click", async () => {
             method: "POST"
         });
 
-        alert("Task Assigned ✅");
+        showToast("Task Assigned ✅");
 
     } catch (err) {
         console.error(err);
@@ -314,6 +314,16 @@ searchInput.addEventListener("input", applyFilters);
 customSkillInput.addEventListener("input", applyFilters);
 availabilityFilter.addEventListener("change", applyFilters);
 statusFilter.addEventListener("change", applyFilters);
+
+const searchInputTop = document.getElementById("volSearchTop");
+if (searchInputTop) {
+    searchInputTop.addEventListener("input", (e) => {
+        if (searchInput) {
+            searchInput.value = e.target.value;
+            applyFilters();
+        }
+    });
+}
 //  PENDING LOGIC
 function updatePendingCount(data) {
 
@@ -366,7 +376,7 @@ document.getElementById("approveBtn").addEventListener("click", async () => {
             method: "PATCH"
         });
 
-        alert("Approved ✅");
+        showToast("Approved ✅");
 
         fetchVolunteers(); // reload
 
@@ -384,7 +394,7 @@ document.getElementById("suspendBtn").addEventListener("click", async () => {
             method: "PATCH"
         });
 
-        alert("Suspended ❌");
+        showToast("Suspended ❌", "warning");
 
         fetchVolunteers();
 
@@ -393,7 +403,7 @@ document.getElementById("suspendBtn").addEventListener("click", async () => {
     }
 });
 // 3. ASSIGN BUTTON (SIDEBAR)
-document.getElementById("assignSidebarBtn").addEventListener("click", async () => {
+document.getElementById("assignBtn")?.addEventListener("click", async () => {
 
     if (!selectedVolunteer) return;
 
@@ -402,10 +412,32 @@ document.getElementById("assignSidebarBtn").addEventListener("click", async () =
             method: "POST"
         });
 
-        alert("Task Assigned 🚀");
+        showToast("Task Assigned 🚀");
 
     } catch (err) {
         console.error(err);
+    }
+});
+
+// 4. CHAT BUTTON
+const chatBtn = document.getElementById("chatBtn");
+chatBtn?.addEventListener("click", async () => {
+    if (!selectedVolunteer) return;
+
+    try {
+        const res = await fetch("/api/admin/chat-start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ other_uid: selectedVolunteer.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+        } else {
+            alert("Failed to start chat: " + (data.error || "Unknown error"));
+        }
+    } catch (err) {
+        console.error("Chat error:", err);
     }
 });
     // CLOSE

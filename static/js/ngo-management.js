@@ -217,6 +217,16 @@ if (searchInput) {
 if (statusFilter) {
     statusFilter.addEventListener("change", applyFilters);
 }
+
+const searchInputTop = document.getElementById("ngoSearchTop");
+if (searchInputTop) {
+    searchInputTop.addEventListener("input", (e) => {
+        if (searchInput) {
+            searchInput.value = e.target.value;
+            applyFilters();
+        }
+    });
+}
     // =======================
     // POST (ADD NGO)
     // =======================
@@ -271,6 +281,28 @@ if (statusFilter) {
         : "/static/images/ngologo.png";
    }
 
+   // CHAT WITH NGO
+   const chatBtn = document.getElementById("chatBtn");
+   chatBtn?.addEventListener("click", async () => {
+       if (!selectedNgo) return;
+
+       try {
+           const res = await fetch("/api/admin/chat-start", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ other_uid: selectedNgo.id })
+           });
+           const data = await res.json();
+           if (data.success) {
+               window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+           } else {
+               alert("Failed to start chat: " + (data.error || "Unknown error"));
+           }
+       } catch (err) {
+           console.error("Chat error:", err);
+       }
+   });
+
 //    
    // =======================
 // BUTTON LOGIC
@@ -287,7 +319,7 @@ if (verifyBtn) {
         if (!selectedNgo) return;
 
         if (!selectedNgo.registrationDoc && !selectedNgo.taxDoc) {
-            alert("No documents available");
+            showToast("No documents available", "warning");
             return;
         }
 
@@ -323,7 +355,7 @@ approveBtn?.addEventListener("click", async () => {
             method: "PATCH"
         });
 
-        alert("NGO Approved ✅");
+        showToast("NGO Approved ✅");
 
         verifyModal.classList.add("hidden");
 
@@ -343,7 +375,7 @@ rejectBtn?.addEventListener("click", async () => {
             method: "PATCH"
         });
 
-        alert("NGO Suspended ❌");
+        showToast("NGO Suspended ❌", "warning");
 
         verifyModal.classList.add("hidden");
 
@@ -368,7 +400,7 @@ suspendBtn?.addEventListener("click", async () => {
             method: "PATCH"
         });
 
-        alert("NGO Suspended ❌");
+        showToast("NGO Suspended ❌", "warning");
 
         fetchNGOs();
 
@@ -478,7 +510,7 @@ if (ngoForm) {
         ngoForm.reset();
 
         // SUCCESS MESSAGE
-        alert("NGO Registered Successfully (Pending Approval)");
+        showToast("NGO Registered Successfully (Pending Approval)");
    
         } catch (err) {
             console.error("Error:", err);
@@ -507,7 +539,7 @@ if (exportBtn) {
     exportBtn.addEventListener("click", () => {
 
         if (!ngosData.length) {
-            alert("No data to export");
+            showToast("No data to export", "warning");
             return;
         }
 

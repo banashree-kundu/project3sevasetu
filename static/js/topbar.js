@@ -315,32 +315,77 @@ async function _getFirebaseConfig() {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Internal: Show a small toast notification in the page
+// Public API: Show a premium toast notification
 // ────────────────────────────────────────────────────────────────
-function _showTopbarToast(message, clickUrl) {
-    const toast = document.createElement('div');
-    toast.style.cssText = [
-        'position:fixed;bottom:80px;right:24px;z-index:9999;',
-        'background:white;border-left:4px solid #006c44;border-radius:.75rem;',
-        'padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.12);',
-        "font-size:.875rem;font-weight:500;font-family:'Plus Jakarta Sans',sans-serif;",
-        'color:#121c2a;cursor:pointer;max-width:320px;',
-    ].join('');
-    toast.textContent = message;
-
-    if (clickUrl) {
-        toast.addEventListener('click', () => {
-            window.location.href = clickUrl;
-        });
-    } else {
-        toast.addEventListener('click', () => toast.remove());
+window.showToast = function(message, type = 'success', duration = 4000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        // Basic container style if not in CSS
+        container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:12px;';
+        document.body.appendChild(container);
     }
 
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.transition = 'all .3s ease';
-        toast.style.opacity = '0';
+    const toast = document.createElement('div');
+    const isError = type === 'error';
+    const isWarning = type === 'warning';
+    
+    let bgColor = '#006c44'; // success
+    if (isError) bgColor = '#ba1a1a';
+    if (isWarning) bgColor = '#855300';
+
+    toast.className = `toast-item ${type}`;
+    toast.style.cssText = `
+        background: white;
+        border-left: 4px solid ${bgColor};
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.02);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #121c2a;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        min-width: 280px;
+        max-width: 400px;
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    `;
+
+    const icon = isError ? 'error' : isWarning ? 'warning' : 'check_circle';
+    toast.innerHTML = `
+        <span class="material-symbols-outlined" style="color:${bgColor};font-variation-settings:'FILL' 1">${icon}</span>
+        <span style="flex:1">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(0)';
+        toast.style.opacity = '1';
+    });
+
+    const removeToast = () => {
         toast.style.transform = 'translateX(20px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    };
+
+    toast.addEventListener('click', removeToast);
+    
+    if (duration > 0) {
+        setTimeout(removeToast, duration);
+    }
+};
+
+// Internal alias for backward compatibility within topbar.js
+function _showTopbarToast(message, clickUrl) {
+    window.showToast(message, 'info', 6000);
+    // Note: clickUrl handling could be added to showToast if needed
 }

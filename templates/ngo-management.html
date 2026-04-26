@@ -96,52 +96,68 @@
             border-radius: 10px;
         }
     </style>
+   <link rel="stylesheet" href="/static/css/admin_dashboard.css"/>
    <link rel="stylesheet" href="/static/css/ngo-management.css"/>  
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
 
-<!-- TopNavBar Anchor -->
-<header class="fixed top-0 left-0 right-0 h-16 flex justify-between items-center px-8 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
-    <div class="flex items-center gap-4">
-        <div class="w-10 h-10 bg-gradient-to-br from-[#006c44] to-emerald-700 rounded-xl flex items-center justify-center shadow-emerald-200 shadow-lg">
-            <span class="material-symbols-outlined text-white">handshake</span>
-        </div>
-        <div class="flex flex-col">
-            <h1 class="text-xl font-black tracking-tight text-slate-800 leading-none">
-                Seva<span class="text-primary">Setu</span>
-            </h1>
-            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Admin Intelligence</span>
-        </div>
-    </div>
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="material-symbols-outlined">eco</span>
+  </div>
+  <button class="sidebar-btn {{ 'active' if request.path == '/admin/dashboard' else '' }}" title="Dashboard" onclick="window.location.href='/admin/dashboard'">
+    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>
+  </button>
+  <button class="sidebar-btn {{ 'active' if request.path == '/admin/ngos' else '' }}" title="NGOs" onclick="window.location.href='/admin/ngos'">
+    <span class="material-symbols-outlined">apartment</span>
+  </button>
+  <button class="sidebar-btn {{ 'active' if request.path == '/admin/volunteers' else '' }}" title="Volunteers" onclick="window.location.href='/admin/volunteers'">
+    <span class="material-symbols-outlined">groups</span>
+  </button>
+  <button class="sidebar-btn" title="Needs">
+    <span class="material-symbols-outlined">campaign</span>
+  </button>
+  <button class="sidebar-btn" title="Matches">
+    <span class="material-symbols-outlined">handshake</span>
+  </button>
+  <div class="sidebar-divider"></div>
+  <button class="sidebar-btn" title="Reports">
+    <span class="material-symbols-outlined">analytics</span>
+  </button>
+  <button class="sidebar-btn" title="Settings">
+    <span class="material-symbols-outlined">settings</span>
+  </button>
+  <div class="sidebar-bottom">
+    <button class="sidebar-btn" title="Logout" onclick="window.location.href='/logout'">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+    <div class="sidebar-avatar" title="Admin">A</div>
+  </div>
+</aside>
 
-    <div class="flex items-center gap-6">
-        <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="text-[11px] font-bold text-slate-600 uppercase">System Active</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <button class="p-2 text-slate-400 hover:text-primary transition-all relative">
-                <span class="material-symbols-outlined">notifications</span>
-                <span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-            </button>
-            <div class="h-8 w-[1px] bg-slate-200 mx-2"></div>
-            <div class="flex items-center gap-3 group cursor-pointer">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC45bwaRYjVmvvYBFcbzctzQK1DRC0bs17OkpkeqFv9hAGzSyORirXDpib4XgfuwSJ4Zli2CSdOZ3drlT8dDJ0p9QG0SZ47NrPLWAs_QVCXVweCk8oLAOiMt4ADNwMO6XbprQw3UjmJXE2KiNaJFUzlCeYAclsaih19DqulwrL--uG_YctNrte2kwluO2J2BNlmpv6o2IJzQgqybNjM0HmQ1Ud4-rqrkqaWwlFfNoSEpcZ0D3yWvkAWDlHOdF94N0-NcXdI-Wi3fc-M" class="w-9 h-9 rounded-full ring-2 ring-emerald-50 group-hover:ring-emerald-200 transition-all shadow-sm" alt="Admin">
-                <div class="hidden lg:block">
-                    <p class="text-xs font-bold text-slate-700">Administrator</p>
-                    <p class="text-[10px] text-slate-400">Master Access</p>
-                </div>
-            </div>
-        </div>
+<!-- TOPBAR -->
+<header class="topbar fixed top-0 left-[92px] right-0 z-40 bg-white">
+    <div class="topbar-title">NGO Management</div>
+    <div class="topbar-search">
+      <span class="material-symbols-outlined" style="font-size:18px">search</span>
+      <input type="text" id="ngoSearchTop" placeholder="Search NGOs…"/>
     </div>
+    <div class="topbar-badge">
+      <span class="material-symbols-outlined" style="font-size:15px;font-variation-settings:'FILL' 1">circle</span>
+      <span id="topbar-live-label">System Active</span>
+    </div>
+    <button class="icon-btn" id="topbar-bell-btn" title="Notifications">
+      <span class="material-symbols-outlined" style="font-size:18px">notifications</span>
+    </button>
+    <button class="refresh-btn" id="globalRefreshBtn" title="Refresh" onclick="window.location.reload()"
+            style="background:var(--primary-bg);color:var(--primary);border-radius:10px;width:36px;height:36px;">
+      <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
+    </button>
 </header>
 <!-- Main Content Canvas -->
-<!-- Main Content Canvas -->
-<main class="pt-16 h-screen flex bg-[#f8fafc]"> <div class="flex w-full items-stretch">
-
-
-
-        <div id="tableSection" class="flex-1 w-full h-full overflow-auto transition-all duration-300 px-8 py-6">
+<main class="main-wrapper pt-20"> 
+        <div id="tableSection" class="w-full px-8 py-6">
 
             
 
@@ -434,6 +450,9 @@
         </button>
 
         <div class="flex gap-2">
+            <button id="chatBtn" class="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">chat</span> Chat
+            </button>
             <button id="editBtn" class="px-4 py-2 rounded-full border text-sm font-bold">
                 Edit
             </button>
@@ -714,5 +733,6 @@
 
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ngo-management.js') }}"></script>
 </body></html>
