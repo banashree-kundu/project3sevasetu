@@ -346,13 +346,12 @@
 <!-- Toast container -->
 <div id="toast-container"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 
 <!-- Responsive: stack columns on smaller screens -->
 <style>
   @media(max-width:1050px) {
-    #main-grid { grid-template-columns: 1fr !important; }
+    .main-grid { grid-template-columns: 1fr !important; }
   }
   /* Skeleton/loaded toggle helpers referenced in app.js */
   .section-wrap.loading .skel-rows  { display: block; }
