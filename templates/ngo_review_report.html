@@ -138,7 +138,7 @@
                         <div>
                             <p class="section-label">Date</p>
                             <p class="font-bold text-on-surface text-sm">
-                                {{ report.submitted_at.strftime('%b %d, %Y') if report.submitted_at and hasattr(report.submitted_at, 'strftime') else "Recent" }}
+                                {{ report.submitted_at.strftime('%b %d, %Y') if report.submitted_at and report.submitted_at.strftime else "Recent" }}
                             </p>
                         </div>
                     </div>
