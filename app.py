@@ -834,21 +834,7 @@ def api_volunteer_work_pause():
 
     return jsonify({"success": True})
 
-@app.route("/api/volunteer/work/log", methods=["POST"])
-def api_volunteer_work_log():
-    if not session.get("user"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
-    uid  = session["user"]["uid"]
-    data = request.json or {}
-    task_id = data.get("task_id")
-    comment = data.get("comment", "")
-    
-    if not task_id:
-        return jsonify({"error": "Task ID required"}), 400
-        
-    firebase_services.log_work_milestone(task_id, uid, comment)
-    return jsonify({"success": True})
+
 @app.route("/api/volunteer/work/location", methods=["POST"])
 def api_volunteer_work_location():
     if not session.get("user"):
