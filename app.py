@@ -780,6 +780,23 @@ def api_volunteer_work_start():
         return jsonify({"error": "Task ID required"}), 400
         
     firebase_services.start_work_session(task_id, uid)
+    
+    match_ref = firebase_services.get_db().collection("matches").document(task_id)
+    match_doc = match_ref.get()
+    if match_doc.exists:
+        mdata = match_doc.to_dict()
+        ngo_id = mdata.get("ngo_id")
+        vol_name = session["user"].get("name", "A volunteer")
+        need_title = mdata.get("title", "a task")
+        if ngo_id:
+            add_notification(
+                ngo_id, 
+                "Work Started", 
+                f"{vol_name} has started working on: {need_title}",
+                "info",
+                {"match_id": task_id, "need_id": mdata.get("need_id")}
+            )
+
     return jsonify({"success": True})
 
 
@@ -798,9 +815,40 @@ def api_volunteer_work_pause():
         return jsonify({"error": "Task ID required"}), 400
         
     firebase_services.pause_work_session(task_id, uid, comment, duration_ms)
+    
+    match_ref = firebase_services.get_db().collection("matches").document(task_id)
+    match_doc = match_ref.get()
+    if match_doc.exists:
+        mdata = match_doc.to_dict()
+        ngo_id = mdata.get("ngo_id")
+        vol_name = session["user"].get("name", "A volunteer")
+        need_title = mdata.get("title", "a task")
+        if ngo_id:
+            add_notification(
+                ngo_id, 
+                "Work Paused", 
+                f"{vol_name} has paused work on: {need_title}",
+                "warning",
+                {"match_id": task_id, "need_id": mdata.get("need_id")}
+            )
+
     return jsonify({"success": True})
 
-
+@app.route("/api/volunteer/work/log", methods=["POST"])
+def api_volunteer_work_log():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    uid  = session["user"]["uid"]
+    data = request.json or {}
+    task_id = data.get("task_id")
+    comment = data.get("comment", "")
+    
+    if not task_id:
+        return jsonify({"error": "Task ID required"}), 400
+        
+    firebase_services.log_work_milestone(task_id, uid, comment)
+    return jsonify({"success": True})
 @app.route("/api/volunteer/work/location", methods=["POST"])
 def api_volunteer_work_location():
     if not session.get("user"):

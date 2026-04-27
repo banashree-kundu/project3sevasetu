@@ -252,11 +252,11 @@ function renderAcceptedTasks(tasks) {
           <span class="status-chip ${statusCls}">${statusLabel}</span>
         </div>
         <div style="margin-bottom:12px;">
-          <button onclick="handleWorkAction('${escHtml(task.id)}', '${task.status === "in_progress" ? "pause" : "start"}', this)"
-                  class="work-action-btn ${task.status === "in_progress" ? "pause" : "start"}"
-                  style="width:100%; padding:8px; border-radius:8px; font-weight:700; font-size:0.75rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
-            <span class="material-symbols-outlined" style="font-size:16px;">${task.status === "in_progress" ? "pause_circle" : "play_circle"}</span>
-            ${task.status === "in_progress" ? "Pause Work" : "Start Work"}
+          <button onclick="handleWorkAction('${escHtml(task.id)}', '${task.work_status === "working" ? "pause" : "start"}', this)"
+                  class="work-action-btn ${task.work_status === "working" ? "pause" : "start"}"
+                  style="width:100%; padding:8px; border-radius:8px; font-weight:700; font-size:0.75rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; ${task.work_status === "working" ? "background:#fff1f2;color:#e11d48;" : "background:#f0faf5;color:#006c44;"}">
+            <span class="material-symbols-outlined" style="font-size:16px;">${task.work_status === "working" ? "pause_circle" : "play_circle"}</span>
+            ${task.work_status === "working" ? "Pause Work" : (task.work_status === "paused" ? "Resume Work" : "Start Work")}
           </button>
         </div>
         <div>

@@ -597,6 +597,7 @@ def enrich_tasks_with_needs(matches, vol_uid):
             "ngo_name":       ngo_name,
             "distance_km":    distance_km,
             "status":         status,
+            "work_status":    match.get("work_status", "idle"),
             "deadline_text":  deadline_text,
             "progress_pct":   progress,
             "phase":          "Setup Phase" if progress < 50 else "In Progress",
@@ -745,6 +746,25 @@ def pause_work_session(match_id, vol_id, comment, duration_ms):
         "total_work_ms":         firestore.Increment(duration_ms),
         "current_session_start": firestore.DELETE_FIELD,
         "updated_at":            firestore.SERVER_TIMESTAMP
+    })
+    return True
+
+def log_work_milestone(match_id, vol_id, comment):
+    """Log a milestone during an active work session."""
+    match_ref = db.collection("matches").document(match_id)
+    match_doc = match_ref.get()
+    
+    if not match_doc.exists:
+        return False
+        
+    mdata = match_doc.to_dict()
+    if mdata.get("volunteer_id") != vol_id:
+        return False
+        
+    match_ref.collection("work_log").add({
+        "comment":    comment,
+        "type":       "log",
+        "timestamp":  firestore.SERVER_TIMESTAMP
     })
     return True
 

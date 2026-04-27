@@ -524,6 +524,23 @@
               Unassign Volunteer
             </button>`;
 
+          if (need.work_log && need.work_log.length > 0) {
+            html += `<p class="section-label" style="margin-top:20px;margin-bottom:8px;">Work Session Logs</p>
+                     <div style="background:#f8f9ff;border-radius:12px;padding:12px;border:1px solid #e2e8f0;max-height:200px;overflow-y:auto;">`;
+            need.work_log.forEach(log => {
+                let timeStr = "";
+                if (log.timestamp) {
+                    const date = new Date(log.timestamp._seconds ? log.timestamp._seconds * 1000 : log.timestamp);
+                    timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+                html += `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;">
+                           <div style="font-size:.8rem;color:#121c2a;font-weight:600;">${esc(log.comment)}</div>
+                           <div style="font-size:.7rem;color:#6e7a71;margin-top:2px;">${timeStr} ${log.type === 'pause' ? '• Paused' : ''}</div>
+                         </div>`;
+            });
+            html += `</div>`;
+          }
+
           // Start polling for location if task is in progress
           if (status === 'in_progress') {
             setTimeout(() => {
