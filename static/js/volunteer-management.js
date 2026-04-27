@@ -407,6 +407,70 @@ chatBtn?.addEventListener("click", async () => {
     // 🔥 RESTORE 3 COLUMN
     container.classList.remove("pr-[360px]", "lg:grid-cols-2");
 });
+    // =====================
+    // REGISTER VOLUNTEER MODAL
+    // =====================
+    const volModal = document.getElementById("volunteerModal");
+    const addVolBtn = document.getElementById("addVolunteerBtn");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const volForm = document.getElementById("volunteerForm");
+
+    addVolBtn?.addEventListener("click", () => {
+        volModal.classList.remove("hidden");
+        volModal.classList.add("flex");
+    });
+
+    closeModalBtn?.addEventListener("click", () => {
+        volModal.classList.add("hidden");
+        volModal.classList.remove("flex");
+    });
+
+    volModal?.addEventListener("click", (e) => {
+        if (e.target === volModal) {
+            volModal.classList.add("hidden");
+            volModal.classList.remove("flex");
+        }
+    });
+
+    volForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = volForm.querySelector("button[type='submit']");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creating...";
+
+        const payload = {
+            name: document.getElementById("formName").value,
+            email: document.getElementById("formEmail").value,
+            password: document.getElementById("formPassword").value,
+            city: document.getElementById("formCity").value
+        };
+
+        try {
+            const res = await fetch("/api/volunteers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                window.showToast("Volunteer account created! ✅");
+                volModal.classList.add("hidden");
+                volModal.classList.remove("flex");
+                volForm.reset();
+                fetchVolunteers();
+            } else {
+                window.showToast(data.error || "Failed to create account", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast("Connection error", "error");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Create Account";
+        }
+    });
+
     // INIT
     fetchVolunteers();
 

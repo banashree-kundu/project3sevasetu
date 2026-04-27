@@ -715,8 +715,15 @@ def api_volunteer_work_action(task_id):
     if mdata.get("volunteer_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
 
+    if action == "start":
+        success = firebase_services.start_work_session(task_id, uid)
+    else:
+        success = firebase_services.pause_work_session(task_id, uid, "Paused via dashboard", 0)
+        
+    if not success:
+        return jsonify({"error": "Action failed"}), 500
+
     new_status = "in_progress" if action == "start" else "accepted"
-    match_ref.update({"status": new_status})
     
     # Notify NGO
     ngo_id = mdata.get("ngo_id")
@@ -1878,22 +1885,72 @@ def api_get_all_volunteers():
         user_doc = db.collection("users").document(uid).get()
         user = user_doc.to_dict() if user_doc.exists else {}
 
+        # Format joined date
+        ts = user.get("created_at")
+        joined = "N/A"
+        if ts and hasattr(ts, "strftime"):
+            joined = ts.strftime("%b %d, %Y")
+        elif ts and isinstance(ts, dict) and "_seconds" in ts:
+            joined = datetime.fromtimestamp(ts["_seconds"]).strftime("%b %d, %Y")
+
         result.append({
             "id": uid,
-            "name": user.get("name"),
-            "email": user.get("email"),
-            "photo": user.get("photo_url"),
-
+            "name": user.get("name") or vol.get("name", "Anonymous"),
+            "email": user.get("email") or vol.get("email"),
+            "photo": user.get("photo_url") or vol.get("photo_url"),
             "skills": vol.get("skills", []),
-            "availability": vol.get("availability"),
-            "city": vol.get("location", {}).get("city"),
-            "status": "Active" if vol.get("online") else "Offline",
+            "availability": vol.get("availability") or "Any Time",
+            "city": vol.get("location", {}).get("city") or vol.get("city", "India"),
+            "status": "Active" if vol.get("verified") else "Pending",
             "rating": vol.get("rating", 0),
             "tasks": vol.get("totalTasks", 0),
-            "phone": user.get("phone")
+            "phone": user.get("phone") or vol.get("phone", "Not provided"),
+            "joined": joined
         })
 
     return jsonify(result)
+
+@app.route("/api/volunteers", methods=["POST"])
+def api_register_volunteer_manual():
+    if not session.get("user") or session["user"].get("role") != "admin":
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    email = data.get("email")
+    password = data.get("password", "SevaSetu123!")
+    name = data.get("name")
+    
+    try:
+        # 1. Create Firebase Auth user
+        user = auth.create_user(
+            email=email,
+            password=password,
+            display_name=name
+        )
+        uid = user.uid
+        
+        # 2. Add to 'users' collection
+        firebase_services.add_user(uid, email, name, photo_url="", role="volunteer")
+        
+        # 3. Create Volunteer profile
+        vol_data = {
+            "name": name,
+            "email": email,
+            "skills": data.get("skills", []),
+            "availability": data.get("availability", "Any Time"),
+            "location": {"city": data.get("city", "India"), "lat": None, "lng": None},
+            "verified": True,
+            "rating": 5.0,
+            "totalTasks": 0,
+            "createdAt": firestore.SERVER_TIMESTAMP
+        }
+        db = firebase_services.get_db()
+        db.collection("volunteers").document(uid).set(vol_data)
+        
+        return jsonify({"success": True, "uid": uid})
+    except Exception as e:
+        logger.error(f"Error creating volunteer account: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/volunteers/<id>/approve", methods=["PATCH"])
 def api_approve_volunteer(id):
@@ -2060,8 +2117,8 @@ def ngo_report_review_page(need_id):
         return redirect("/select-role")
     
     need = firebase_services.get_need_by_id(need_id)
-    if not need or need.get("status") != "in_review":
-        return "Report not found or not in review", 404
+    if not need or need.get("status") not in ["in_review", "completed"]:
+        return "Report not found or not in review/completed state", 404
     
     # Get volunteer details for the report
     report = need.get("completion_report", {})

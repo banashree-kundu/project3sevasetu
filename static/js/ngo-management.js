@@ -302,6 +302,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // Logo
         const logoEl = document.getElementById("ngoLogo");
         if (logoEl) logoEl.src = ngo.logo || "/static/images/ngologo.png";
+
+        // Hide verify button if already verified
+        const verifyBtn = document.getElementById("verifyBtn");
+        if (verifyBtn) {
+            if (ngo.status === "Verified") {
+                verifyBtn.style.display = "none";
+            } else {
+                verifyBtn.style.display = "flex";
+            }
+        }
     }
 
     // =======================
@@ -538,6 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const formData = new FormData();
             formData.append("name",        document.getElementById("formName").value);
             formData.append("email",       document.getElementById("formEmail").value);
+            formData.append("password",    document.getElementById("formPassword").value);
             formData.append("phone",       document.getElementById("formPhone").value);
             formData.append("city",        document.getElementById("formCity").value);
             formData.append("category",    document.getElementById("formCategory").value);

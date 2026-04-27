@@ -140,7 +140,7 @@ function renderStats(stats) {
       iconClr: '#006c44',
       label:   'Completed Tasks',
       value:   stats.resolved_needs || 0,
-      badge:   '94%',
+      badge:   stats.total_needs ? Math.round((stats.resolved_needs / stats.total_needs) * 100) + '%' : '0%',
       badgeCls:'green',
       decoClr: '#006c44',
     },
@@ -275,17 +275,73 @@ function renderActivity(activities) {
 
   el.innerHTML = activities.slice(0, 6).map(item => {
     const cfg = iconMap[item.type] || iconMap.default;
-    return `<div class="activity-item">
+    return `<div class="activity-item" onclick="openActivityReview(${JSON.stringify(item).replace(/"/g, '&quot;')})">
       <div class="activity-icon" style="background:${cfg.bg};">
         <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">${cfg.icon}</span>
       </div>
-      <div>
+      <div style="flex:1;">
         <div class="activity-text">${escHtml(item.title || '')}</div>
         <div class="activity-time">${escHtml(item.subtitle || '')} · ${timeAgo(item.created_at)}</div>
       </div>
+      <span class="material-symbols-outlined text-gray-300 group-hover:text-primary transition-colors">chevron_right</span>
     </div>`;
   }).join('');
 }
+
+window.openActivityReview = function(item) {
+    const modalId = 'activity-review-modal';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal-backdrop';
+        modal.innerHTML = `
+            <div class="modal-box" style="max-width:500px;">
+                <div class="modal-head">
+                    <div>
+                        <div class="modal-title" id="actRevTitle">Activity Details</div>
+                        <div class="modal-subtitle" id="actRevSub">Review platform event</div>
+                    </div>
+                    <button class="modal-close" onclick="closeModal('${modalId}')">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding:24px;">
+                    <div id="actRevContent" class="space-y-4">
+                        <!-- Content will be injected -->
+                    </div>
+                    <div class="pt-6 mt-6 border-t flex gap-3">
+                        <button class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-sm" onclick="closeModal('${modalId}')">Dismiss</button>
+                        <button id="actRevAction" class="flex-1 bg-primary text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/10">View Resource</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    document.getElementById('actRevTitle').textContent = item.title;
+    document.getElementById('actRevSub').textContent = item.subtitle + ' · ' + timeAgo(item.created_at);
+    document.getElementById('actRevContent').innerHTML = `
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <p class="text-sm text-gray-600 leading-relaxed">${item.description || 'No additional details available for this activity.'}</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-gray-400 font-medium">
+            <span class="material-symbols-outlined text-sm">fingerprint</span>
+            ID: ${item.id || 'N/A'}
+        </div>
+    `;
+
+    const actionBtn = document.getElementById('actRevAction');
+    if (item.link) {
+        actionBtn.style.display = 'block';
+        actionBtn.onclick = () => window.location.href = item.link;
+    } else {
+        actionBtn.style.display = 'none';
+    }
+
+    if (window.openModal) window.openModal(modalId);
+};
 
 // ══════════════════════════════════════════════════════════════════
 // VERIFICATION QUEUE
