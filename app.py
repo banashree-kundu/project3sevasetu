@@ -26,6 +26,38 @@ socketio = SocketIO(
     transports=["polling"],
 )
 logger = logging.getLogger(__name__)
+
+def time_ago(dt):
+    if not dt:
+        return ""
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except:
+            return dt
+    
+    now = datetime.now(timezone.utc)
+    # Ensure dt is offset-aware
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    diff = now - dt
+    seconds = diff.total_seconds()
+    
+    if seconds < 60:
+        return "Just now"
+    if seconds < 3600:
+        mins = int(seconds / 60)
+        return f"{mins}m ago"
+    if seconds < 86400:
+        hours = int(seconds / 3600)
+        return f"{hours}h ago"
+    if seconds < 604800:
+        days = int(seconds / 86400)
+        return f"{days}d ago"
+    return dt.strftime("%b %d, %Y")
+
+app.jinja_env.filters['time_ago'] = time_ago
 # ======================
 # Firebase Init
 # ======================
@@ -60,6 +92,14 @@ def ngo_dashboard():
         return redirect("/select-role")
     return render_template("ngo_dashboard.html", user=session["user"])
 
+@app.route("/ngo/reports")
+def ngo_reports():
+    if not session.get("user"):
+        return redirect("/getstarted")
+    if session["user"].get("role") != "ngo":
+        return redirect("/select-role")
+    return render_template("ngo_field_reports.html", user=session["user"])
+
 @app.route("/need/<need_id>/<role>")
 def need_details(need_id, role):
     if not session.get("user"):
@@ -74,11 +114,39 @@ def need_details(need_id, role):
     if ngo_id:
         ngo_profile = firebase_services.get_ngo_profile(ngo_id)
         need["ngo_verified"] = ngo_profile.get("verified", False)
+        need["ngo_name"] = ngo_profile.get("org_name", "Seva NGO")
     else:
         need["ngo_verified"] = False
+        need["ngo_name"] = "Seva NGO"
         
+    # Fetch associated match if assigned
+    match_data = None
+    volunteer_data = None
+    if need.get("status") in ["assigned", "in_progress", "completed"]:
+        # Find the active match for this need
+        matches = firebase_services.get_db().collection("matches").where("need_id", "==", need_id).stream()
+        for m in matches:
+            m_dict = m.to_dict()
+            if m_dict.get("status") in ["accepted", "in_progress", "completed"]:
+                match_data = m_dict
+                match_data["id"] = m.id
+                # Fetch work logs
+                logs = firebase_services.get_db().collection("matches").document(m.id).collection("work_log").order_by("timestamp", direction="DESCENDING").stream()
+                match_data["work_logs"] = [l.to_dict() for l in logs]
+                
+                # Fetch volunteer profile
+                vol_id = m_dict.get("volunteer_id")
+                if vol_id:
+                    vol_doc = firebase_services.get_db().collection("volunteers").document(vol_id).get()
+                    if vol_doc.exists:
+                        volunteer_data = vol_doc.to_dict()
+                        volunteer_data["id"] = vol_doc.id
+                break
+
     return render_template("ngo&volunteerdetails.html", 
                            need=need, 
+                           match=match_data,
+                           volunteer=volunteer_data,
                            role=role, 
                            user=session["user"])
 
