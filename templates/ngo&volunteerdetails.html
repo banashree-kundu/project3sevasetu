@@ -755,20 +755,18 @@
     let _timerInterval  = null;
     let _elapsedSeconds = 0;
     let _isRunning      = false;
-    let _sessionStartEpoch = null; // Tracks start time of current active session
+    let _sessionStartEpoch = null; 
     let _locationWatchId = null;
-    let _locationQueue  = [];      // offline retry queue
+    let _locationQueue  = [];      
     let _lastLat = null, _lastLng = null;
-    const LOC_THRESHOLD_KM = 0.1;  // only push if moved >100 m
+    const LOC_THRESHOLD_KM = 0.1;  
 
-    // ── haversine distance (km) ──────────────────────
     function _haversine(lat1, lng1, lat2, lng2) {
       const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
       const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // ── format seconds as HH:MM:SS ──────────────────
     function _fmt(s) {
       const h = String(Math.floor(s/3600)).padStart(2,'0');
       const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
@@ -776,7 +774,6 @@
       return `${h}:${m}:${sc}`;
     }
 
-   // ── init tracker on DOM ready (Firebase Source of Truth) ──
     function initTracker() {
       fetch(`/api/need/${NEED_ID}`)
         .then(res => res.json())
@@ -784,40 +781,28 @@
             const need = data.need;
             if (!need) return;
 
-            // Failsafe: Guarantee MATCH_ID is set from the DB response
             if (need.match_id) MATCH_ID = need.match_id;
 
-            // 1. Base accumulated time from Firebase
             let totalMs = need.total_work_ms || 0;
             _elapsedSeconds = Math.floor(totalMs / 1000);
             
-            // 2. Check if currently running
             if (need.work_status === 'working' && need.current_session_start) {
-                // current_session_start is in Unix seconds
                 const startMs = need.current_session_start * 1000;
                 const nowMs = Date.now();
-                
-                // Add the time elapsed in the current active session
                 if (nowMs > startMs) {
                     _elapsedSeconds += Math.floor((nowMs - startMs) / 1000);
                 }
-                
                 _sessionStartEpoch = startMs;
-                _startTimer(false); // false = resume existing session on UI
+                _startTimer(false); 
             }
-            
             _updateClockUI();
         })
         .catch(err => console.error("Error initializing tracker:", err));
     }
 
-
-    // ── toggle start / pause ─────────────────────────
-    // ── toggle start / pause ─────────────────────────
     async function toggleWorkSession() {
-      const btn   = document.getElementById("trackerToggleBtn");
+      const btn = document.getElementById("trackerToggleBtn");
       
-      // Failsafe: Fetch MATCH_ID dynamically if missing
       if (!MATCH_ID) {
           try {
               const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
@@ -831,11 +816,9 @@
           return;
       }
 
-      // Temporarily disable button to prevent spam clicks
       btn.disabled = true;
 
       if (!_isRunning) {
-        // --- START ---
         try {
           const res = await fetch("/api/volunteer/work/start", {
             method: "POST",
@@ -848,10 +831,10 @@
           _startTimer(true); 
           showToast("Work session started ✅", "success");
         } catch (err) {
+          console.error(err);
           showToast("Could not start session", "error");
         }
       } else {
-        // --- PAUSE ---
         const sessionDurationMs = Date.now() - _sessionStartEpoch;
         try {
           const res = await fetch("/api/volunteer/work/pause", {
@@ -864,20 +847,68 @@
           _pauseTimer();
           showToast("Session paused", "success");
         } catch (err) {
+          console.error(err);
           showToast("Could not pause session", "error");
         }
       }
-
       btn.disabled = false;
     }
-    
-// ── milestone log ────────────────────────────────
+
+    function _startTimer(isNewSession) {
+      _isRunning = true;
+      document.getElementById("trackerClock").classList.add("running");
+      
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+      
+      if (btn) {
+          icon.textContent = "pause";
+          label.textContent = "Pause Work";
+          btn.classList.add("pausing");
+          document.getElementById("trackerStatus").textContent = "Session active";
+          document.getElementById("trackerMilestoneWrap").style.display = "block";
+          document.getElementById("trackerLocation").style.display = "flex";
+      }
+
+      _startLocationSync();
+
+      _timerInterval = setInterval(() => {
+        _elapsedSeconds++;
+        _updateClockUI();
+      }, 1000);
+    }
+
+    function _pauseTimer() {
+      _isRunning = false;
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      document.getElementById("trackerClock").classList.remove("running");
+
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+
+      if (btn) {
+          icon.textContent  = "play_arrow";
+          label.textContent = "Resume Work";
+          btn.classList.remove("pausing");
+          document.getElementById("trackerStatus").textContent = "Paused";
+      }
+
+      _stopLocationSync();
+    }
+
+    function _updateClockUI() {
+      const el = document.getElementById("trackerClock");
+      if (el) el.textContent = _fmt(_elapsedSeconds);
+    }
+
     async function logMilestone() {
       const input = document.getElementById("milestoneInput");
       const comment = input?.value.trim();
       if (!comment) { showToast("Please enter a milestone comment.", "error"); return; }
       
-      // Failsafe
       if (!MATCH_ID) {
           try {
               const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
@@ -905,9 +936,24 @@
       showToast("Milestone logged ✅", "success");
     }
 
-    // ── live location sync ───────────────────────────
+    function _startLocationSync() {
+      if (!navigator.geolocation) return;
+      _locationWatchId = navigator.geolocation.watchPosition(
+        (pos) => syncLocation(pos.coords.latitude, pos.coords.longitude),
+        (err) => console.warn("Geo error:", err),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+      );
+      _flushLocationQueue();
+    }
+
+    function _stopLocationSync() {
+      if (_locationWatchId !== null) {
+        navigator.geolocation.clearWatch(_locationWatchId);
+        _locationWatchId = null;
+      }
+    }
+
     async function syncLocation(lat, lng) {
-      // Failsafe
       if (!MATCH_ID) {
           try {
               const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
@@ -953,7 +999,8 @@
         } catch { break; }
       }
     }
-  // ── NGO Live Tracking Map ────────────────────────
+
+    // ── NGO Live Tracking Map ────────────────────────
     let _ngoMapInstance = null;
     let _ngoMarkerInstance = null;
     let _ngoPollInterval = null;
@@ -963,8 +1010,6 @@
       const { OLA_MAPS_API_KEY } = await keyRes.json();
       if (!OLA_MAPS_API_KEY) return;
 
-      // Prevent loading into the ocean (blue screen)
-      // Grab the Task Location as the default center while waiting for volunteer
       let startLng = 77.5946;
       let startLat = 12.9716;
       try {
@@ -986,8 +1031,11 @@
       });
 
       _ngoMapInstance.on('load', () => {
+        // FIX: Force resize so it is not a blank blue box!
+        setTimeout(() => { _ngoMapInstance.resize(); }, 300);
+
         _pollVolunteerLocation();
-        _ngoPollInterval = setInterval(_pollVolunteerLocation, 10000); // Check every 10 seconds 
+        _ngoPollInterval = setInterval(_pollVolunteerLocation, 10000); 
       });
     }
 
