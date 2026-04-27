@@ -148,3 +148,29 @@ def notify_ngo_report_submitted(ngo_id, vol_name, need_title, need_id):
         }
     )
 
+def notify_volunteer_report_approved(vol_id, need_title, rating):
+    """Notify a volunteer that their report was approved."""
+    stars = "⭐" * int(rating or 0)
+    return send_fcm_notification(
+        uid=vol_id,
+        title="Impact Confirmed! 🎉",
+        body=f"Your report for '{need_title}' has been approved. You received {rating} stars! {stars}",
+        data={
+            "type": "report_approved",
+            "rating": rating,
+            "click_action": "/volunteer/dashboard"
+        }
+    )
+
+def notify_volunteer_report_rejected(vol_id, need_title, ngo_name):
+    """Notify a volunteer that an NGO requested changes on their report."""
+    return send_fcm_notification(
+        uid=vol_id,
+        title="Updates Requested 🔄",
+        body=f"{ngo_name} has requested changes on your report for '{need_title}'. Please check your dashboard.",
+        data={
+            "type": "report_rejected",
+            "click_action": "/volunteer/dashboard"
+        }
+    )
+

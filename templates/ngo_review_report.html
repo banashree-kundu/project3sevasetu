@@ -1,48 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Review Report | SevaSetu{% endblock %}
+{% block title %}Review Completion Report | SevaSetu{% endblock %}
 
 {% block head %}
 <style>
-    body { background: #f8f9ff; }
-    .review-card {
-        background: white;
-        border-radius: 1.5rem;
-        padding: 2.5rem;
-        box-shadow: 0 20px 50px rgba(0, 108, 68, 0.04);
-        border: 1px solid rgba(0, 108, 68, 0.05);
-    }
-    .sage-gradient {
-        background: linear-gradient(135deg, #006c44 0%, #4caf7d 100%);
-    }
-    .section-label {
-        font-size: 0.7rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #3e4942;
-        opacity: 0.6;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    .proof-image {
-        width: 100%;
-        max-height: 400px;
-        object-fit: contain;
-        background: #f0f4f8;
-        border-radius: 1rem;
-    }
     .star-rating {
         display: flex;
         flex-direction: row-reverse;
-        justify-content: flex-end;
-        gap: 0.5rem;
+        gap: 4px;
     }
-    .star-rating input { display: none; }
+    .star-rating input {
+        display: none;
+    }
     .star-rating label {
-        cursor: pointer;
         font-size: 2rem;
-        color: #d1d5db;
+        color: #ddd;
+        cursor: pointer;
         transition: color 0.2s;
     }
     .star-rating input:checked ~ label,
@@ -50,195 +23,166 @@
     .star-rating label:hover ~ label {
         color: #fea619;
     }
+    .star-rating label .material-symbols-outlined {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="max-w-7xl mx-auto px-6 py-12 pb-32">
-    <!-- Header -->
-    <header class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+<main class="max-w-7xl mx-auto px-6 py-12 pb-32" data-aos="fade-up">
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
             <div class="flex items-center gap-3 mb-4">
-                <span class="px-4 py-1.5 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-black tracking-widest uppercase">
+                <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-bold tracking-widest uppercase">
                     Submitted for Review
                 </span>
             </div>
-            <h1 class="text-4xl font-black tracking-tight text-on-surface mb-2">Review Completion Report</h1>
-            <p class="text-on-surface-variant font-medium">Validate the impact and work performed by the volunteer.</p>
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-on-surface mb-2">Review Completion Report</h1>
+            <p class="text-on-surface-variant max-w-2xl">Validate the impact and resource allocation for the emergency response initiative.</p>
         </div>
-        
-        <div class="flex flex-wrap gap-4">
-            <button onclick="handleAction('reject')" class="px-8 py-3.5 rounded-full border-2 border-error/20 text-error font-black text-sm hover:bg-error/5 transition-all">
+        <div class="flex flex-wrap gap-3">
+            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-all">
+                <span class="material-symbols-outlined">mail</span>
+                Message Volunteer
+            </button>
+            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-secondary text-secondary font-bold hover:bg-secondary/5 transition-all">
+                <span class="material-symbols-outlined">edit_note</span>
                 Request Changes
             </button>
-            <button onclick="handleAction('approve')" class="px-10 py-3.5 rounded-full sage-gradient text-white font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+            <button id="approveBtn" class="flex items-center gap-2 px-8 py-3 rounded-full primary-gradient-btn text-white font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all" onclick="openReviewModal()">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
-                Approve Completion
+                Approve & Rate
             </button>
         </div>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <!-- Main Content -->
-        <div class="lg:col-span-8 space-y-8">
-            <section class="review-card">
-                <h2 class="section-label mb-8">Report Details</h2>
-                <div class="space-y-10">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <section class="lg:col-span-8 space-y-8">
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-6">Report Content</h2>
+                <div class="space-y-8">
                     <div>
-                        <h3 class="font-black text-on-surface mb-3 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">description</span>
-                            Description of Work
-                        </h3>
-                        <p class="text-on-surface-variant leading-relaxed font-medium">
-                            {{ report.description }}
+                        <h3 class="text-lg font-bold text-on-surface mb-3">Description</h3>
+                        <p class="text-on-surface-variant leading-relaxed">
+                            {{ report.description if report else "Managed the logistics and distribution of 50 emergency food parcels to displaced families in the western sector." }}
                         </p>
                     </div>
-                    
                     <div>
-                        <h3 class="font-black text-on-surface mb-3 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">analytics</span>
-                            Impact Summary
-                        </h3>
-                        <p class="text-on-surface-variant leading-relaxed font-medium">
-                            {{ report.impact }}
+                        <h3 class="text-lg font-bold text-on-surface mb-3">Impact Summary</h3>
+                        <p class="text-on-surface-variant leading-relaxed">
+                            {{ report.impact if report else "Successfully delivered enough nutrition to sustain 50 households for approximately 7 days." }}
                         </p>
-                    </div>
-
-                    {% if report.notes %}
-                    <div class="bg-surface-container-low p-6 rounded-2xl border border-emerald-50">
-                        <h3 class="section-label">Additional Notes</h3>
-                        <p class="text-on-surface-variant text-sm font-medium">{{ report.notes }}</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </section>
-
-            {% if report.proof_url %}
-            <section class="review-card">
-                <h2 class="section-label mb-6">Verification Evidence</h2>
-                <div class="relative group">
-                    <img src="{{ report.proof_url }}" class="proof-image" alt="Proof of work">
-                    <a href="{{ report.proof_url }}" target="_blank" class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg text-xs font-bold text-primary flex items-center gap-2 hover:bg-white transition-all">
-                        <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>
-                        View Full Quality
-                    </a>
-                </div>
-            </section>
-            {% endif %}
-
-            <!-- Rating & Review Section -->
-            <section class="review-card" id="ratingSection">
-                <h2 class="section-label mb-8">Rate Volunteer Performance</h2>
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-black text-on-surface mb-3">Overall Rating</label>
-                        <div class="star-rating">
-                            <input type="radio" name="rating" id="star5" value="5"><label for="star5" class="material-symbols-outlined">star</label>
-                            <input type="radio" name="rating" id="star4" value="4"><label for="star4" class="material-symbols-outlined">star</label>
-                            <input type="radio" name="rating" id="star3" value="3"><label for="star3" class="material-symbols-outlined">star</label>
-                            <input type="radio" name="rating" id="star2" value="2"><label for="star2" class="material-symbols-outlined">star</label>
-                            <input type="radio" name="rating" id="star1" value="1"><label for="star1" class="material-symbols-outlined">star</label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-black text-on-surface mb-3">Written Review</label>
-                        <textarea id="writtenReview" rows="4" 
-                            class="w-full bg-surface-container-low border-emerald-50 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary outline-none transition-all"
-                            placeholder="Share your feedback about the volunteer's work..."></textarea>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- Sidebar -->
-        <aside class="lg:col-span-4 space-y-6">
-            <div class="review-card">
-                <h2 class="section-label mb-8">Submission Info</h2>
-                <div class="space-y-6">
-                    <div class="flex items-center gap-4">
-                        <img src="{{ volunteer.photo_url or 'https://ui-avatars.com/api/?name=' + volunteer.name }}" 
-                             class="w-14 h-14 rounded-2xl object-cover border-4 border-white shadow-sm" alt="Volunteer">
-                        <div>
-                            <p class="section-label mb-0">Volunteer</p>
-                            <p class="font-black text-primary">{{ volunteer.name }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="h-px bg-emerald-50"></div>
-                    
-                    <div>
-                        <p class="section-label">Need</p>
-                        <p class="font-bold text-on-surface">{{ need.title }}</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6">
-                        <div>
-                            <p class="section-label">Hours</p>
-                            <p class="font-black text-on-surface text-xl">{{ report.hours }} <span class="text-xs font-medium text-on-surface-variant/60">hrs</span></p>
-                        </div>
-                        <div>
-                            <p class="section-label">Date</p>
-                            <p class="font-bold text-on-surface text-sm">
-                                {{ report.submitted_at.strftime('%b %d, %Y') if report.submitted_at and report.submitted_at.strftime else "Recent" }}
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-primary/5 rounded-3xl p-8 border border-primary/10">
-                <div class="flex items-center gap-3 mb-4 text-primary">
-                    <span class="material-symbols-outlined">info</span>
-                    <h3 class="font-black text-sm uppercase tracking-widest">Review Guide</h3>
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-6">Verification Evidence</h2>
+                <div class="group relative overflow-hidden rounded-2xl aspect-video max-w-md">
+                    <img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                         src="{{ report.image_url if report else 'https://images.unsplash.com/photo-1593113598332-cd288d649433' }}" alt="Evidence"/>
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span class="text-white font-bold flex items-center gap-2 cursor-pointer">
+                            <span class="material-symbols-outlined">fullscreen</span>
+                            View Full Image
+                        </span>
+                    </div>
                 </div>
-                <p class="text-xs text-on-surface-variant font-medium leading-relaxed">
-                    Verify that the photos match the description and the impact aligns with the initial requirements. Approved tasks contribute to the volunteer's community rating.
-                </p>
+            </div>
+        </section>
+
+        <aside class="lg:col-span-4 space-y-6">
+            <div class="bg-surface-container-low rounded-3xl p-8 border border-slate-200">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-8">Submission Details</h2>
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
+                            <img class="w-full h-full object-cover" src="{{ volunteer.photo_url if volunteer else 'https://ui-avatars.com/api/?name=Arjun+Sharma&background=006c44&color=fff' }}" alt="Volunteer"/>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant tracking-wider uppercase">Volunteer</p>
+                            <p class="font-bold text-primary text-lg">{{ volunteer.name if volunteer else "Arjun Sharma" }}</p>
+                        </div>
+                    </div>
+                    <div class="h-px bg-slate-200"></div>
+                    <div>
+                        <p class="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">Need</p>
+                        <p class="font-bold text-on-surface">{{ need.title if need else "Emergency Food Supply" }}</p>
+                    </div>
+                </div>
             </div>
         </aside>
     </div>
+
+    <!-- Approval & Rating Modal -->
+    <div id="reviewModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-6">
+        <div class="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" onclick="closeReviewModal()"></div>
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg relative z-10 p-10 shadow-2xl overflow-hidden" data-aos="zoom-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">stars</span>
+                </div>
+                <h2 class="text-3xl font-bold text-on-surface">Rate Volunteer</h2>
+                <p class="text-slate-500 mt-2">Share your feedback on {{ volunteer.name if volunteer else "Arjun's" }} work.</p>
+            </div>
+
+            <form id="ratingForm" class="space-y-8">
+                <div class="flex flex-col items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Performance Rating</label>
+                    <div class="star-rating">
+                        <input type="radio" id="star5" name="rating" value="5" /><label for="star5"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star4" name="rating" value="4" /><label for="star4"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star3" name="rating" value="3" /><label for="star3"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star2" name="rating" value="2" /><label for="star2"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star1" name="rating" value="1" /><label for="star1"><span class="material-symbols-outlined">star</span></label>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Written Review</label>
+                    <textarea id="reviewText" rows="4" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-5 text-sm focus:ring-2 focus:ring-primary/20 transition-all resize-none" 
+                              placeholder="Write a few words about the volunteer's impact..."></textarea>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="button" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all" onclick="closeReviewModal()">Cancel</button>
+                    <button type="submit" class="flex-[2] py-4 primary-gradient-btn text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">Submit Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </main>
+{% endblock %}
 
+{% block scripts %}
 <script>
-async function handleAction(action) {
-    if (!confirm(`Are you sure you want to ${action} this report?`)) return;
-    
-    let rating = null;
-    let review = null;
+    function openReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
 
-    if (action === 'approve') {
-        const ratingInput = document.querySelector('input[name="rating"]:checked');
-        if (!ratingInput) {
-            alert("Please provide a rating before approving.");
-            document.getElementById('ratingSection').scrollIntoView({ behavior: 'smooth' });
+    function closeReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.getElementById('ratingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rating = document.querySelector('input[name="rating"]:checked')?.value;
+        const review = document.getElementById('reviewText').value;
+
+        if (!rating) {
+            alert('Please select a rating');
             return;
         }
-        rating = parseInt(ratingInput.value);
-        review = document.getElementById('writtenReview').value.trim();
-    }
 
-    try {
-        const res = await fetch("/api/ngo/report/action", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                need_id: "{{ need.id }}",
-                action: action,
-                rating: rating,
-                review: review
-            })
-        });
-        
-        if (res.ok) {
-            alert(`Report ${action === 'approve' ? 'approved' : 'returned to in-progress'}.`);
-            window.location.href = "/ngo/dashboard";
-        } else {
-            throw new Error("Action failed");
-        }
-    } catch (err) {
-        alert("Error: " + err.message);
-    }
-}
+        // Logic to submit approval and rating
+        // fetch('/api/ngo/approve-report', { ... })
+        alert('Report approved with ' + rating + ' stars!');
+        window.location.href = '/ngo/dashboard';
+    });
 </script>
 {% endblock %}

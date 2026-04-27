@@ -2157,7 +2157,8 @@ def api_ngo_report_action():
         update_data = {
             "status": "completed",
             "ngo_rating": rating,
-            "ngo_review": review
+            "ngo_review": review,
+            "completed_at": firebase_services.firestore.SERVER_TIMESTAMP
         }
         need_ref.update(update_data)
         
@@ -2185,13 +2186,35 @@ def api_ngo_report_action():
                         "totalTasks": new_total_tasks,
                         "rating": round(new_rating, 2)
                     })
+                    
+                    # Persist qualitative review for the volunteer
+                    vol_ref.collection("reviews").add({
+                        "need_id": need_id,
+                        "need_title": need.get("title"),
+                        "ngo_id": session["user"]["uid"],
+                        "ngo_name": session["user"].get("name", "An NGO"),
+                        "rating": rating,
+                        "review": review,
+                        "timestamp": firebase_services.firestore.SERVER_TIMESTAMP
+                    })
                 else:
                     vol_ref.update({"totalTasks": firebase_services.firestore.Increment(1)})
+                
+                # Notify volunteer
+                notification_service.notify_volunteer_report_approved(vol_id, need.get("title"), rating)
                     
         return jsonify({"success": True})
     else:
-        # Revert to in_progress or assigned if rejected
-        need_ref.update({"status": "in_progress"})
+        # Revert to assigned if rejected so volunteer can try again
+        need_ref.update({"status": "assigned"})
+        
+        # Notify volunteer
+        report = need.get("completion_report", {})
+        vol_id = report.get("volunteer_id")
+        if vol_id:
+            ngo_name = session["user"].get("name", "NGO")
+            notification_service.notify_volunteer_report_rejected(vol_id, need.get("title"), ngo_name)
+            
         return jsonify({"success": True})
 
 # ══════════════════════════════════════════════════════════════════

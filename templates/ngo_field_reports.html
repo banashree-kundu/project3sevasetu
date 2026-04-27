@@ -1,51 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Field Reports | SevaSetu</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-tailwind.config = {
-  theme: { extend: {
-    colors: {
-      "primary":"#006c44","primary-container":"#4caf7d","primary-fixed":"#93f7bf","primary-fixed-dim":"#77daa4",
-      "on-primary":"#ffffff","on-primary-container":"#003d25","on-primary-fixed":"#002112","on-primary-fixed-variant":"#005232",
-      "secondary":"#855300","secondary-container":"#fea619","secondary-fixed":"#ffddb8","secondary-fixed-dim":"#ffb95f",
-      "on-secondary":"#ffffff","on-secondary-container":"#684000","on-secondary-fixed":"#2a1700","on-secondary-fixed-variant":"#653e00",
-      "tertiary":"#a83639","tertiary-container":"#fa7272","tertiary-fixed":"#ffdad8","tertiary-fixed-dim":"#ffb3b0",
-      "on-tertiary":"#ffffff","on-tertiary-container":"#6d0714","on-tertiary-fixed":"#410006","on-tertiary-fixed-variant":"#881d24",
-      "surface":"#f8f9ff","surface-dim":"#d0dbed","surface-bright":"#f8f9ff","surface-variant":"#d9e3f6",
-      "surface-container-lowest":"#ffffff","surface-container-low":"#eff4ff","surface-container":"#e6eeff",
-      "surface-container-high":"#dee9fc","surface-container-highest":"#d9e3f6",
-      "on-surface":"#121c2a","on-surface-variant":"#3e4942",
-      "outline":"#6e7a71","outline-variant":"#bdcabf",
-      "background":"#f8f9ff","on-background":"#121c2a",
-      "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a",
-      "inverse-surface":"#27313f","inverse-on-surface":"#eaf1ff","inverse-primary":"#77daa4",
-      "surface-tint":"#006c44"
-    },
-    fontFamily:{"headline":["Plus Jakarta Sans"],"body":["Plus Jakarta Sans"]},
-    borderRadius:{"DEFAULT":"1rem","lg":"2rem","xl":"3rem","full":"9999px"}
-  }}
-}
-</script>
+{% extends "base.html" %}
+
+{% block title %}Field Reports | SevaSetu{% endblock %}
+
+{% block head %}
 <style>
-  body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f7f4; }
-  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  body::before {
-    content:''; position:fixed; inset:0; z-index:-1;
-    background-image: radial-gradient(circle, rgba(0,108,68,0.04) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  .fade-up { animation: fadeUp 0.4s ease both; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { animation: spin 1s linear infinite; }
   @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .skel { background:#e2e8f0; border-radius:6px; animation:skelPulse 1.4s ease infinite; }
+  
   /* Upload Modal */
   #post-modal {
     display: none; position: fixed; inset: 0; z-index: 300;
@@ -58,197 +21,146 @@ tailwind.config = {
   @keyframes slideUp { from{opacity:0; transform:translateY(24px)} to{opacity:1; transform:translateY(0)} }
   #drop-zone.drag-over { border-color: #006c44; background: #f0faf5; }
 </style>
-</head>
-<body class="text-on-surface min-h-screen">
+{% endblock %}
 
-<!-- ══ HEADER ══ -->
-<header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-md shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
-  <div class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
-    <div class="flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow shadow-primary/25">
-        <span class="material-symbols-outlined text-white" style="font-size:16px;font-variation-settings:'FILL' 1">volunteer_activism</span>
-      </div>
-      <span class="text-xl font-extrabold text-emerald-900 tracking-tighter">SevaSetu</span>
-    </div>
-    <nav class="hidden md:flex items-center gap-6 text-sm font-semibold">
-      <a href="/ngo/dashboard" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
-      <a href="/ngo/reports" class="text-primary border-b-2 border-primary pb-0.5">Field Reports</a>
-      <a href="/ngo/needs" class="text-on-surface-variant hover:text-primary transition-colors">Needs</a>
-    </nav>
-    <div class="flex items-center gap-3">
-      <!-- Chat inbox — always visible -->
-      <a href="/inbox" id="topbar-chat-btn"
-         class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all"
-         title="Chat inbox" style="display:none">
-        <span class="material-symbols-outlined">chat</span>
-      </a>
-      <!-- Bell — shown only when notifications not yet enabled -->
-      <button id="topbar-bell-btn"
-              class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all"
-              style="display:none">
-        <span class="material-symbols-outlined">notifications</span>
-      </button>
-      <!-- Avatar — lazy-loaded -->
-      <div class="h-9 w-9 rounded-full overflow-hidden border-2 border-primary-container/30 bg-surface-container flex items-center justify-center">
-        <img id="topbar-avatar" src="" alt="Profile" class="h-full w-full object-cover"/>
-        <span id="topbar-avatar-fallback"
-              style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;color:#006c44;">
-        </span>
-      </div>
-      <a href="/ngo/dashboard" class="px-5 py-2 bg-surface-container-highest text-on-surface rounded-full text-sm font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1">
-        <span class="material-symbols-outlined text-sm">arrow_back</span> Dashboard
-      </a>
-    </div>
-  </div>
-</header>
-
-
-<!-- ══ MAIN ══ -->
-<main class="max-w-7xl mx-auto px-6 py-10 space-y-10 pb-24">
+{% block content %}
+<main class="max-w-7xl mx-auto px-6 py-10 space-y-10 pb-24" data-aos="fade-up">
 
   <!-- Page Header -->
-  <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 fade-up">
+  <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
     <div>
       <p class="text-xs font-bold uppercase tracking-widest text-primary mb-1">NGO Dashboard</p>
       <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface">Field Reports</h1>
       <p class="text-on-surface-variant mt-1">AI-powered extraction from your uploaded documents.</p>
     </div>
     <button onclick="openModal()"
-            class="px-6 py-3 bg-primary text-on-primary rounded-full font-bold flex items-center gap-2 hover:opacity-90 shadow-md">
+            class="px-8 py-3 bg-primary text-white rounded-full font-bold flex items-center gap-2 hover:opacity-90 shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
       <span class="material-symbols-outlined">upload</span>
       Upload Report
     </button>
   </header>
 
   <!-- Stats Row -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-up" style="animation-delay:.07s">
-    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
-      <div class="w-14 h-14 bg-primary-fixed/40 rounded-2xl flex items-center justify-center text-primary flex-shrink-0">
-        <span class="material-symbols-outlined text-3xl">analytics</span>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-6" data-aos="fade-up" data-aos-delay="100">
+      <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary flex-shrink-0">
+        <span class="material-symbols-outlined text-4xl">analytics</span>
       </div>
       <div>
-        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Total Reports</p>
-        <p class="text-3xl font-black text-on-surface" id="statTotal">—</p>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Reports</p>
+        <p class="text-4xl font-black text-on-surface" id="statTotal">—</p>
       </div>
     </div>
-    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
-      <div class="w-14 h-14 bg-secondary-fixed/60 rounded-2xl flex items-center justify-center text-secondary flex-shrink-0">
-        <span class="material-symbols-outlined text-3xl">hourglass_bottom</span>
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-6" data-aos="fade-up" data-aos-delay="200">
+      <div class="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary flex-shrink-0">
+        <span class="material-symbols-outlined text-4xl">hourglass_bottom</span>
       </div>
       <div>
-        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Processing</p>
-        <p class="text-3xl font-black text-on-surface" id="statProcessing">—</p>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Processing</p>
+        <p class="text-4xl font-black text-on-surface" id="statProcessing">—</p>
       </div>
     </div>
-    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
-      <div class="w-14 h-14 bg-tertiary-fixed/60 rounded-2xl flex items-center justify-center text-tertiary flex-shrink-0">
-        <span class="material-symbols-outlined text-3xl">verified</span>
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-6" data-aos="fade-up" data-aos-delay="300">
+      <div class="w-16 h-16 bg-tertiary/10 rounded-2xl flex items-center justify-center text-tertiary flex-shrink-0">
+        <span class="material-symbols-outlined text-4xl">verified</span>
       </div>
       <div>
-        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Needs Created</p>
-        <p class="text-3xl font-black text-on-surface" id="statNeeds">—</p>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Needs Created</p>
+        <p class="text-4xl font-black text-on-surface" id="statNeeds">—</p>
       </div>
     </div>
   </div>
 
-  <!-- Reports Table -->
-  <div class="bg-surface-container-lowest rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] overflow-hidden fade-up" style="animation-delay:.14s">
-    <div class="px-8 py-5 flex items-center justify-between border-b border-outline-variant/10">
-      <h2 class="text-lg font-bold text-on-surface">Uploaded Reports</h2>
-      <div class="flex items-center bg-surface-container-high px-4 py-2 rounded-full border border-outline-variant/20 gap-2">
-        <span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
-        <input id="searchInput" class="bg-transparent border-none focus:ring-0 text-sm w-48 p-0 outline-none" placeholder="Search reports..." type="text"/>
+  <!-- Reports Table Card -->
+  <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-10 py-8 flex flex-col md:flex-row items-center justify-between gap-6 border-b border-slate-50">
+      <div>
+        <h2 class="text-2xl font-bold text-on-surface">Uploaded Reports</h2>
+        <p class="text-sm text-slate-500 mt-1">Review and manage your field submissions</p>
+      </div>
+      <div class="flex items-center bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 gap-3 w-full md:w-auto">
+        <span class="material-symbols-outlined text-slate-400 text-xl">search</span>
+        <input id="searchInput" class="bg-transparent border-none focus:ring-0 text-sm w-full md:w-64 p-0 outline-none" placeholder="Search reports..." type="text"/>
       </div>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
-        <thead class="bg-surface-container-low">
-          <tr>
-            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">File</th>
-            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">Uploaded</th>
-            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
-            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+        <thead>
+          <tr class="bg-slate-50/50">
+            <th class="px-10 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">File</th>
+            <th class="px-10 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Uploaded</th>
+            <th class="px-10 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
+            <th class="px-10 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
           </tr>
         </thead>
-        <tbody id="reportsTableBody" class="divide-y divide-outline-variant/10">
+        <tbody id="reportsTableBody" class="divide-y divide-slate-50">
           <!-- Skeleton rows shown while loading -->
-          <tr><td colspan="4" class="px-8 py-6">
-            <div class="space-y-4">
-              ${[1,2,3].map(()=>`<div class="flex items-center gap-4"><div class="skel w-10 h-10 rounded-lg flex-shrink-0"></div><div class="flex-1 space-y-2"><div class="skel h-4 w-1/2"></div><div class="skel h-3 w-1/4"></div></div></div>`).join('')}
+          <tr><td colspan="4" class="px-10 py-12">
+            <div class="space-y-6">
+              <div class="animate-pulse flex items-center gap-6"><div class="w-12 h-12 bg-slate-100 rounded-xl"></div><div class="flex-1 h-4 bg-slate-100 rounded w-1/3"></div></div>
+              <div class="animate-pulse flex items-center gap-6"><div class="w-12 h-12 bg-slate-100 rounded-xl"></div><div class="flex-1 h-4 bg-slate-100 rounded w-1/2"></div></div>
             </div>
           </td></tr>
         </tbody>
       </table>
     </div>
-    <div id="tablePagination" class="px-8 py-4 flex items-center justify-between bg-surface-container-low/30 border-t border-outline-variant/10 hidden">
-      <p id="paginationInfo" class="text-xs font-medium text-on-surface-variant"></p>
+    <div id="tablePagination" class="px-10 py-6 flex items-center justify-between bg-slate-50/30 border-t border-slate-50 hidden">
+      <p id="paginationInfo" class="text-sm font-medium text-slate-500"></p>
     </div>
-  </footer>
+  </div>
 </main>
 
 <!-- ══════════════ UPLOAD MODAL ══════════════ -->
 <div id="post-modal" onclick="closeModalOutside(event)">
-  <div id="modal-box" class="bg-white rounded-2xl shadow-2xl shadow-emerald-900/10 w-full max-w-lg mx-4 p-8 relative">
-    <button onclick="closeModal()" class="absolute top-5 right-5 p-1.5 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+  <div id="modal-box" class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl mx-4 p-10 relative">
+    <button onclick="closeModal()" class="absolute top-8 right-8 p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400">
       <span class="material-symbols-outlined">close</span>
     </button>
-    <div class="flex items-center gap-4 mb-8">
-      <div class="p-3 bg-primary/10 text-primary rounded-full">
-        <span class="material-symbols-outlined">auto_awesome</span>
+    <div class="flex items-center gap-5 mb-10">
+      <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+        <span class="material-symbols-outlined text-3xl">auto_awesome</span>
       </div>
       <div>
-        <h3 class="text-xl font-bold text-on-surface">Upload Field Report</h3>
-        <p class="text-on-surface-variant text-sm mt-0.5">AI will extract needs automatically from your documents</p>
+        <h3 class="text-2xl font-bold text-on-surface">Upload Field Report</h3>
+        <p class="text-slate-500 mt-1">AI will extract needs automatically from your documents</p>
       </div>
     </div>
+    
     <div id="drop-zone"
-      class="border-2 border-dashed border-outline-variant/50 rounded-lg p-12 flex flex-col items-center justify-center bg-surface-container-low/30 hover:bg-surface-container-low transition-colors cursor-pointer group"
+      class="border-2 border-dashed border-slate-200 rounded-3xl p-16 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-emerald-50/30 hover:border-primary/30 transition-all cursor-pointer group"
       onclick="document.getElementById('file-input').click()"
       ondragover="handleDragOver(event)"
       ondragleave="handleDragLeave(event)"
       ondrop="handleDrop(event)">
-      <span class="material-symbols-outlined text-5xl text-outline-variant group-hover:text-primary mb-4 transition-colors">cloud_upload</span>
-      <p class="text-on-surface-variant font-medium">Drag and drop field reports or <span class="text-primary underline">browse</span></p>
-      <p class="text-xs text-outline mt-2">Supports PDF, DOCX, and JPG (max 20MB)</p>
+      <div class="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-all mb-6">
+        <span class="material-symbols-outlined text-4xl">cloud_upload</span>
+      </div>
+      <p class="text-on-surface font-bold text-lg">Drag and drop field reports</p>
+      <p class="text-slate-500 mt-2">or <span class="text-primary underline font-bold">browse your files</span></p>
+      <p class="text-xs text-slate-400 mt-6 px-4 py-2 bg-white rounded-full border border-slate-100 uppercase tracking-widest font-bold">PDF, DOCX, JPG (Max 20MB)</p>
       <input id="file-input" type="file" accept=".pdf,.docx,.jpg,.jpeg" class="hidden" onchange="handleFileSelect(event)"/>
     </div>
-    <div id="file-preview" class="hidden mt-4 items-center gap-3 bg-surface-container-low rounded-xl px-4 py-3">
-      <span class="material-symbols-outlined text-primary">description</span>
+
+    <div id="file-preview" class="hidden mt-6 items-center gap-4 bg-emerald-50/50 border border-emerald-100/50 rounded-2xl px-6 py-4">
+      <span class="material-symbols-outlined text-primary text-3xl">description</span>
       <div class="flex-1 min-w-0">
         <p id="file-name" class="text-sm font-bold text-on-surface truncate"></p>
-        <p id="file-size" class="text-xs text-on-surface-variant"></p>
+        <p id="file-size" class="text-xs text-primary font-bold"></p>
       </div>
-      <button onclick="clearFile(event)" class="text-outline hover:text-tertiary transition-colors">
-        <span class="material-symbols-outlined text-sm">cancel</span>
+      <button onclick="clearFile(event)" class="text-slate-300 hover:text-red-500 transition-colors">
+        <span class="material-symbols-outlined">cancel</span>
       </button>
     </div>
-    <div class="flex gap-3 mt-8">
-      <button onclick="closeModal()" class="flex-1 py-3 bg-surface-container-highest text-on-surface rounded-full font-bold text-sm hover:bg-surface-container-high transition-colors">Cancel</button>
-      <button id="submit-btn" onclick="handleSubmit()" disabled class="flex-1 py-3 bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-full font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed">Submit Report</button>
+
+    <div class="flex gap-4 mt-10">
+      <button onclick="closeModal()" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all">Cancel</button>
+      <button id="submit-btn" onclick="handleSubmit()" disabled class="flex-[2] py-4 primary-gradient-btn text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed">Submit Report</button>
     </div>
   </div>
 </div>
+{% endblock %}
 
-<!-- Mobile Nav -->
-<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 z-50 flex justify-around items-center">
-  <a href="/ngo/dashboard" class="flex flex-col items-center text-slate-400 gap-0.5">
-    <span class="material-symbols-outlined text-xl">dashboard</span>
-    <span class="text-[10px] font-bold">Dash</span>
-  </a>
-  <a href="/ngo/reports" class="flex flex-col items-center text-primary gap-0.5">
-    <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1">description</span>
-    <span class="text-[10px] font-bold">Reports</span>
-  </a>
-  <a href="/ngo/needs" class="flex flex-col items-center text-slate-400 gap-0.5">
-    <span class="material-symbols-outlined text-xl">volunteer_activism</span>
-    <span class="text-[10px] font-bold">Needs</span>
-  </a>
-  <a href="/ngo/dashboard" class="flex flex-col items-center text-slate-400 gap-0.5">
-    <span class="material-symbols-outlined text-xl">settings</span>
-    <span class="text-[10px] font-bold">Settings</span>
-  </a>
-</nav>
-
+{% block scripts %}
 <script>
 // ── file icon by extension ──────────────────────────────────
 function fileIcon(name) {
@@ -272,35 +184,34 @@ function formatSize(bytes) {
 
 function statusBadge(status) {
   if (status === 'processed' || status === 'done') {
-    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed-dim/30 text-primary rounded-full text-xs font-bold">
-      <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>Processed</div>`;
+    return `<div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
+      <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>Processed</div>`;
   }
   if (status === 'processing') {
-    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-secondary-fixed/30 text-secondary rounded-full text-xs font-bold animate-pulse">
+    return `<div class="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-bold border border-amber-100 animate-pulse">
       <span class="material-symbols-outlined text-[14px] spin">sync</span>Processing</div>`;
   }
   if (status === 'failed') {
-    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-error-container text-error rounded-full text-xs font-bold">
+    return `<div class="inline-flex items-center gap-2 px-4 py-1.5 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-100">
       <span class="material-symbols-outlined text-[14px]">error</span>Failed</div>`;
   }
-  return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-bold">
-    <div class="w-1.5 h-1.5 rounded-full bg-outline"></div>Pending</div>`;
+  return `<div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 text-slate-600 rounded-full text-xs font-bold border border-slate-100">
+    <div class="w-1.5 h-1.5 rounded-full bg-slate-400"></div>Pending</div>`;
 }
 
 function actionBtn(report) {
   const s = report.status;
   if (s === 'processed' || s === 'done') {
-    return `<a href="/ngo/upload/review/${report.id}" class="bg-primary text-on-primary px-5 py-2 rounded-full text-xs font-bold hover:opacity-90 active:scale-95 transition-all shadow-sm">
+    return `<a href="/ngo/upload/review/${report.id}" class="bg-primary text-white px-6 py-2 rounded-full text-xs font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all">
       Review Needs</a>`;
   }
   if (s === 'processing') {
-    return `<a href="/ngo/upload/processing/${report.id}" class="text-primary font-bold text-xs hover:underline px-5 py-2">
+    return `<a href="/ngo/upload/processing/${report.id}" class="text-primary font-bold text-xs hover:underline px-6 py-2">
       View Progress</a>`;
   }
-  return `<span class="text-on-surface-variant text-xs px-5 py-2 opacity-40">—</span>`;
+  return `<span class="text-slate-300 text-xs px-6 py-2 font-bold uppercase tracking-widest">—</span>`;
 }
 
-// ── Load reports from API ────────────────────────────────────
 /* Upload modal */
 function openModal() { document.getElementById('post-modal').classList.add('open'); document.body.style.overflow='hidden'; }
 function closeModal() { document.getElementById('post-modal').classList.remove('open'); document.body.style.overflow=''; clearFile(); }
@@ -352,7 +263,6 @@ window.handleSubmit = async function() {
 
     const data = await res.json();
     closeModal();
-    // Redirect to the animated processing page
     setTimeout(() => {
       window.location.href = data.redirect || "/ngo/reports";
     }, 800);
@@ -361,6 +271,7 @@ window.handleSubmit = async function() {
     console.error("Upload error:", err);
     submitBtn.disabled   = false;
     submitBtn.textContent = "Submit Report";
+    if (window.showToast) window.showToast(err.message, 'error');
   }
 };
 
@@ -377,9 +288,9 @@ async function loadReports() {
     renderTable(allReports);
   } catch {
     document.getElementById('reportsTableBody').innerHTML = `
-      <tr><td colspan="4" class="px-8 py-12 text-center">
-        <p class="text-on-surface font-bold">Failed to load reports</p>
-        <button onclick="loadReports()" class="mt-3 px-6 py-2 bg-primary text-white rounded-full font-bold text-sm">Retry</button>
+      <tr><td colspan="4" class="px-10 py-16 text-center">
+        <p class="text-on-surface font-bold text-lg mb-4">Failed to load reports</p>
+        <button onclick="loadReports()" class="px-8 py-3 bg-primary text-white rounded-full font-bold text-sm shadow-lg shadow-primary/20">Retry</button>
       </td></tr>`;
   }
 }
@@ -393,31 +304,33 @@ function renderStats(data) {
 function renderTable(reports) {
   const tbody = document.getElementById('reportsTableBody');
   if (!reports.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="px-8 py-16 text-center">
-      <span class="material-symbols-outlined text-5xl text-outline-variant block mb-3">folder_open</span>
-      <p class="font-bold text-on-surface">No reports yet</p>
-      <p class="text-sm text-on-surface-variant mt-1">Upload a field report to get started.</p>
+    tbody.innerHTML = `<tr><td colspan="4" class="px-10 py-24 text-center">
+      <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-6">
+        <span class="material-symbols-outlined text-5xl">folder_open</span>
+      </div>
+      <p class="font-bold text-on-surface text-xl">No reports yet</p>
+      <p class="text-slate-500 mt-2">Upload a field report to get started.</p>
     </td></tr>`;
     return;
   }
 
   tbody.innerHTML = reports.map(r => {
     const {icon, color} = fileIcon(r.file_name || r.image_url || '');
-    return `<tr class="hover:bg-surface-container-low/50 transition-colors group">
-      <td class="px-8 py-5">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg ${color} flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined">${icon}</span>
+    return `<tr class="hover:bg-slate-50/50 transition-colors group">
+      <td class="px-10 py-6">
+        <div class="flex items-center gap-5">
+          <div class="w-12 h-12 rounded-xl ${color} flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span class="material-symbols-outlined text-2xl">${icon}</span>
           </div>
           <div>
-            <p class="font-bold text-on-surface">${escHtml(r.file_name || 'report')}</p>
-            <p class="text-xs text-on-surface-variant">${formatSize(r.file_size)} ${r.file_type ? '• '+r.file_type : ''}</p>
+            <p class="font-bold text-on-surface text-lg truncate max-w-[200px] md:max-w-xs">${escHtml(r.file_name || 'report')}</p>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">${formatSize(r.file_size)} ${r.file_type ? '• '+r.file_type : ''}</p>
           </div>
         </div>
       </td>
-      <td class="px-8 py-5 text-on-surface-variant font-medium text-sm">${formatDate(r.uploaded_at)}</td>
-      <td class="px-8 py-5">${statusBadge(r.status)}</td>
-      <td class="px-8 py-5 text-right">${actionBtn(r)}</td>
+      <td class="px-10 py-6 text-slate-500 font-bold text-sm">${formatDate(r.uploaded_at)}</td>
+      <td class="px-10 py-6">${statusBadge(r.status)}</td>
+      <td class="px-10 py-6 text-right">${actionBtn(r)}</td>
     </tr>`;
   }).join('');
 
@@ -436,13 +349,9 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Poll every 10s to refresh processing status
 loadReports();
 setInterval(() => {
   if (allReports.some(r => r.status === 'processing')) loadReports();
 }, 10000);
 </script>
-<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
-</body>
-</html>
-
+{% endblock %}
