@@ -698,12 +698,17 @@ def api_volunteer_dashboard():
         accepted_tasks, uid
     )
 
+    enriched_completed = firebase_services.enrich_tasks_with_needs(
+        completed, uid
+    )
+
     return jsonify({
         "volunteer_name": vol.get("name", session["user"].get("name", "Volunteer"))
                           if vol else session["user"].get("name", "Volunteer"),
         "stats":          stats,
         "matched_tasks":  enriched_matched,
         "accepted_tasks": enriched_accepted,
+        "completed_tasks": enriched_completed,
     })
 
 
@@ -2258,13 +2263,27 @@ def api_ngo_report_action():
                     # Persist qualitative review for the volunteer
                     vol_ref.collection("reviews").add({
                         "need_id": need_id,
-                        "need_title": need.get("title"),
-                        "ngo_id": session["user"]["uid"],
-                        "ngo_name": session["user"].get("name", "An NGO"),
                         "rating": rating,
                         "review": review,
+                        "ngo_id": session["user"]["uid"],
                         "timestamp": firebase_services.firestore.SERVER_TIMESTAMP
                     })
+
+                    # Log activity for NGO
+                    firebase_services.log_activity(
+                        session["user"]["uid"],
+                        "completed",
+                        f"Mission Accomplished: {need.get('title', 'Task')}",
+                        f"Rated {rating} stars"
+                    )
+
+                    # Log activity for Volunteer
+                    firebase_services.log_activity(
+                        vol_id,
+                        "completed",
+                        f"Mission Approved: {need.get('title', 'Task')}",
+                        f"You received a {rating}-star rating!"
+                    )
                 else:
                     vol_ref.update({"totalTasks": firebase_services.firestore.Increment(1)})
                 

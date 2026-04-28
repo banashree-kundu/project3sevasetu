@@ -303,7 +303,7 @@ function renderCompletedHistory(tasks) {
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
         <div>
           <div class="task-name">${escHtml(task.title)}</div>
-          <div class="task-org">${escHtml(task.ngo_name)} · Completed ${task.completed_at || ""}</div>
+          <div class="task-org">${escHtml(task.ngo_name)} · ${timeAgo(task.completed_at)}</div>
         </div>
         <span class="status-chip sc-green">Completed</span>
       </div>
@@ -792,6 +792,13 @@ function showToast(message, type = "success") {
   toast.textContent = message;
   toast.addEventListener("click", () => toast.remove());
   container.appendChild(toast);
+
+  // Play sound
+  try {
+    const audio = new Audio('/static/sounds/toast.mp3');
+    audio.play().catch(e => console.log('Audio play failed:', e));
+  } catch (err) {}
+
   setTimeout(() => {
     toast.style.opacity = "0"; toast.style.transform = "translateX(100%)"; toast.style.transition = "all .3s ease";
     setTimeout(() => toast.remove(), 300);
@@ -996,4 +1003,20 @@ async function confirmRelocation() {
 function escHtml(str) {
   if (!str) return "";
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function timeAgo(timestamp) {
+  if (!timestamp) return "just now";
+  let date;
+  if (timestamp._seconds)          date = new Date(timestamp._seconds * 1000);
+  else if (typeof timestamp==="string") date = new Date(timestamp);
+  else if (typeof timestamp==="number") date = new Date(timestamp);
+  else if (timestamp instanceof Date) date = timestamp;
+  else return "just now";
+  
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60)    return "just now";
+  if (seconds < 3600)  return `${Math.floor(seconds/60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds/3600)}h ago`;
+  return `${Math.floor(seconds/86400)}d ago`;
 }

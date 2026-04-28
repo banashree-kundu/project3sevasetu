@@ -917,6 +917,13 @@ function showToast(message, type = "success") {
   toast.textContent = message;
   toast.addEventListener("click", () => toast.remove());
   container.appendChild(toast);
+
+  // Play sound
+  try {
+    const audio = new Audio('/static/sounds/toast.mp3');
+    audio.play().catch(e => console.log('Audio play failed:', e));
+  } catch (err) {}
+
   setTimeout(() => {
     toast.style.opacity="0"; toast.style.transform="translateX(100%)"; toast.style.transition="all .3s ease";
     setTimeout(() => toast.remove(), 300);
