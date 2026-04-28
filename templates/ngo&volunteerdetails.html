@@ -39,6 +39,11 @@
       border-bottom: 1px solid rgba(0,108,68,.06);
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 24px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 480px) {
+      .navbar { padding: 10px 16px; }
+      .nav-brand span { display: none; }
     }
     .nav-brand { font-size: 1.25rem; font-weight: 800; color: #064e35; display: flex; align-items: center; gap: 8px; }
     .nav-links { display: flex; align-items: center; gap: 8px; }
@@ -116,7 +121,7 @@
 
     /* ── INFO CARDS ── */
     .info-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-    @media (max-width: 500px) { .info-cards { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .info-cards { grid-template-columns: 1fr; } }
 
     .info-card {
       background: var(--surface); border-radius: 12px; padding: 14px 16px;
@@ -137,6 +142,8 @@
     .progress-steps {
       display: flex; align-items: center;
       margin-top: 12px;
+      overflow-x: auto;
+      padding-bottom: 10px;
     }
     .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
     .step-circle {
@@ -405,6 +412,28 @@
               <span>Done</span>
             </div>
           </div>
+
+          <!-- Activity Logs -->
+          {% if match and match.work_logs %}
+          <p class="section-label" style="margin-top:24px;">Activity History</p>
+          <div class="tracker-log" style="max-height: 400px; overflow-y: auto;">
+            {% for log in match.work_logs %}
+            <div class="tracker-log-item">
+              <div>{{ log.comment }}</div>
+              <div class="log-time">
+                {% if log.timestamp and log.timestamp.strftime %}
+                  {{ log.timestamp.strftime('%H:%M · %d %b') }}
+                {% elif log.timestamp and log.timestamp.seconds %}
+                  {# Handle Firestore Timestamp objects if passed raw #}
+                  {{ log.timestamp.seconds | time_ago }}
+                {% else %}
+                  {{ log.timestamp }}
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
       </div>
 
@@ -697,7 +726,7 @@
       openConfirmModal({
         icon:    "⚠️",
         title:   "Unassign Volunteer?",
-        msg:     "This will release the volunteer from this task and set the need back to Open. The AI will re-match.",
+        msg:   "This will release the volunteer from this task and set the need back to Open. The AI will re-match.",
         btnText: "Yes, Unassign",
         btnCls:  "btn-danger",
         onConfirm: doUnassign,

@@ -277,11 +277,11 @@ function wireFilters() {
     btn.addEventListener('click', () => {
       currentStatus = btn.dataset.status;
       document.querySelectorAll('.statusBtn').forEach(b => {
-        b.classList.remove('bg-surface-container-lowest', 'text-primary', 'font-bold');
-        b.classList.add('text-on-surface-variant');
+        b.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+        b.classList.add('text-slate-500', 'hover:text-primary');
       });
-      btn.classList.add('bg-surface-container-lowest', 'text-primary', 'font-bold');
-      btn.classList.remove('text-on-surface-variant');
+      btn.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+      btn.classList.remove('text-slate-500', 'hover:text-primary');
       applyFilters();
     });
   });
